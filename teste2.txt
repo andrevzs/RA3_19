@@ -1,17 +1,38 @@
+*{ Arquivo de teste 2 — Fase 3: erros semânticos intencionais
+   Este arquivo contém erros para validar o analisador semântico.
+   Os erros são semânticos (não sintáticos): a estrutura é válida,
+   mas os tipos ou declarações estão incorretos. }*
 (START)
-(1.0 2.0 +)
-(9.0 4.0 -)
-(6.0 3.0 *)
-(15.0 4.0 |)
-(15.0 4.0 /)
-(15.0 4.0 %)
-(3.0 5.0 ^)
-(25.5 TEMP)
-(TEMP)
-(3 RES)
-((5.0 2.0 ^) (7.0 3.0 *) -)
-(50.0 LIMITE)
-(0.0 I)
-(IF (TEMP 20.0 >=) (1.0 FLAG) (0.0 FLAG))
-(WHILE (I LIMITE <) ((I 5.0 +) I))
+*{ ── ERRO SEMÂNTICO 1: variável usada antes da definição ──
+   PRECO é usada em expressão sem ter sido definida com (valor PRECO).
+   Esperado: erro "variável PRECO não declarada". }*
+(PRECO 10.0 +)
+*{ ── Definição tardia de PRECO (inválida pois já foi usada) ── }*
+(5.0 PRECO)
+*{ ── ERRO SEMÂNTICO 2: operação aritmética com bool ──
+   (PRECO 3.0 >) produz bool; somar bool com real é inválido.
+   Esperado: erro "operação '+' entre bool e real". }*
+(PRECO 3.0 >)
+((1 RES) 2.0 +)
+*{ ── ERRO SEMÂNTICO 3: condição de IF não é bool ──
+   (PRECO) carrega PRECO que é real, não bool.
+   Esperado: erro "condição do IF deve ser bool". }*
+(IF (PRECO) (1.0 RESULT) (0.0 RESULT))
+*{ ── ERRO SEMÂNTICO 4: condição de WHILE não é bool ──
+   (PRECO 2.0 +) produz real, não bool.
+   Esperado: erro "condição do WHILE deve ser bool". }*
+(0.0 J)
+(WHILE (J 2.0 +) ((J 1.0 +) J))
+*{ ── ERRO SEMÂNTICO 5: divisão inteira com operando real ──
+   (3.5 2 /) — OP_IDIV exige inteiros nos dois lados.
+   Esperado: erro "divisão inteira requer tipo int". }*
+(3.5 2 /)
+*{ ── ERRO SEMÂNTICO 6: resto com operando real ──
+   (9.0 4 %) — OP_MOD também exige inteiros.
+   Esperado: erro "resto requer tipo int". }*
+(9.0 4 %)
+*{ ── operações válidas intercaladas para testar robustez ── }*
+(2.0 3.0 +)             *{ válida }*
+(1 RES)                 *{ resultado do comando anterior }*
+(5 10 *)                *{ válida: int * int }*
 (END)
