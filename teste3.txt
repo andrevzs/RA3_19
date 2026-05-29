@@ -1,18 +1,50 @@
-(START)
-(2.5 1.5 +)
-(9.0 6.0 -)
-(8.0 4.0 *)
-(18.0 6.0 |)
-(18.0 6.0 /)
-(18.0 6.0 %)
-(4.0 3.0 ^)
-(30.0 STORE)
-(STORE)
-(1 RES)
-((7.0 8.0 *) 4.0 +)
-(100.0 MAX)
-(0.0 N)
-(IF (STORE MAX !=) (STORE MAX |) (0.0 RAZAO))
-(WHILE (N MAX <) ((N 10.0 +) N))
-(2 RES)
-(END)
+*{ Arquivo de teste 3 — Fase 3: programa completo e complexo
+   Combina: comentários em todas as posições, expressões aninhadas
+   de complexidade crescente, todos os tipos, todas as operações,
+   comandos especiais, decisão e repetição. }*
+(START) *{ início obrigatório }*
+*{ ══════════════════════════════════════════════
+   BLOCO 1 — operadores aritméticos, todos os tipos
+   ══════════════════════════════════════════════ }*
+(1 2 +)                          *{ int + int }*
+(1.5 2.5 +)                      *{ real + real }*
+(10 3 -)                         *{ int - int }*
+(8.0 3.0 *)                      *{ real * real }*
+(7.0 2.0 |)                      *{ divisão real }*
+(7 2 /)                          *{ divisão inteira }*
+(7 2 %)                          *{ resto inteiro }*
+(2 8 ^)                          *{ potência }*
+*{ ══════════════════════════════════════════════
+   BLOCO 2 — variáveis e comandos especiais
+   ══════════════════════════════════════════════ }*
+(100.0 *{ valor inicial }* BASE) *{ define BASE }*
+(BASE)                           *{ carrega BASE }*
+(2 RES)                          *{ resultado 2 comandos atrás }*
+(0 ITER)                         *{ contador de iterações (int) }*
+*{ ══════════════════════════════════════════════
+   BLOCO 3 — expressões aninhadas crescentes
+   ══════════════════════════════════════════════ }*
+((2.0 3.0 +) 4.0 *)
+((BASE 10.0 -) (2.0 3.0 ^) +)
+(((1.0 2.0 +) (3.0 4.0 *) -) BASE |)
+*{ ══════════════════════════════════════════════
+   BLOCO 4 — operadores relacionais (tipo bool)
+   ══════════════════════════════════════════════ }*
+(BASE 50.0 >)
+(ITER 10 <)
+(BASE 100.0 ==)
+(BASE 0.0 !=)
+(ITER 0 >=)
+(BASE 200.0 <=)
+*{ ══════════════════════════════════════════════
+   BLOCO 5 — decisão com e sem else
+   ══════════════════════════════════════════════ }*
+(IF (BASE 0.0 >) (1.0 SINAL) (0.0 SINAL))
+(IF (ITER 0 ==) ((BASE 2.0 *) BASE))
+*{ ══════════════════════════════════════════════
+   BLOCO 6 — repetição
+   ══════════════════════════════════════════════ }*
+(WHILE (ITER 5 <) ((ITER 1 +) ITER))   *{ conta de 0 a 4 }*
+(ITER)                                  *{ verifica valor final }*
+(1 RES)                                 *{ deve ser 5 }*
+(END) *{ fim obrigatório }*

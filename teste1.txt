@@ -1,15 +1,32 @@
+*{ Arquivo de teste 1 — Fase 3: programa semanticamente válido
+   Cobre: todos os operadores, todos os tipos, comentários em
+   diversas posições, comandos especiais, IF e WHILE. }*
 (START)
-(3.14 2.0 +)
-(5.0 3.0 -)
-(4.0 2.0 *)
-(10.0 3.0 |)
-(7.0 3.0 /)
-(10.0 3.0 %)
-(2.0 8.0 ^)
-(10.5 CONTADOR)
-(CONTADOR)
-(5 RES)
-((3.0 4.0 *) 2.0 +)
-(IF (CONTADOR 5.0 >) (20.0 RESULTADO) (0.0 RESULTADO))
-(WHILE (CONTADOR 10.0 <) ((CONTADOR 1.0 +) CONTADOR))
+*{ ── operações aritméticas com reais ── }*
+(3.14 2.0 +)            *{ soma real }*
+(10.0 4.0 -)            *{ subtração real }*
+(6.0 7.0 *)             *{ multiplicação real }*
+(9.0 4.0 |)             *{ divisão real }*
+*{ ── operações inteiras ── }*
+(17 5 /)                *{ divisão inteira }*
+(17 5 %)                *{ resto da divisão }*
+(2 10 ^)                *{ potenciação }*
+*{ ── variáveis: definição e uso ── }*
+(42.0 SALDO)            *{ define SALDO como real }*
+(SALDO)                 *{ carrega SALDO }*
+(3 RES)                 *{ resultado de 3 comandos atrás }*
+*{ ── expressões aninhadas ── }*
+((3.0 4.0 *) (2.0 1.0 +) +)
+((SALDO 10.0 -) 2.0 *)
+*{ ── operadores relacionais (produzem bool) ── }*
+(SALDO 50.0 >)          *{ SALDO > 50? }*
+(SALDO 100.0 <=)        *{ SALDO <= 100? }*
+*{ ── decisão ── }*
+(IF (SALDO 0.0 >) (1.0 POSITIVO) (0.0 POSITIVO))
+*{ ── repetição: acumula enquanto CONT < 5 ── }*
+(0.0 CONT)
+(WHILE (CONT 5.0 <) ((CONT 1.0 +) CONT))
+*{ ── literais lógicos usados como variáveis booleanas ── }*
+(TRUE)
+(FALSE)
 (END)
