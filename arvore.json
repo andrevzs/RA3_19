@@ -1,0 +1,1256 @@
+{
+  "tipo": "NT",
+  "simbolo": "programa",
+  "filhos": [
+    {
+    "tipo": "NT",
+    "simbolo": "stmt_list",
+    "filhos": [
+      {
+      "tipo": "NT",
+      "simbolo": "stmt",
+      "filhos": [
+        {
+        "tipo": "TOKEN",
+        "tipo_token": "LP",
+        "valor": "(",
+        "linha": 1
+      },
+{
+        "tipo": "NT",
+        "simbolo": "stmt_inner",
+        "filhos": [
+          {
+          "tipo": "TOKEN",
+          "tipo_token": "KW_START",
+          "valor": "START",
+          "linha": 1
+        }
+        ],
+        "linha": 1
+      },
+{
+        "tipo": "TOKEN",
+        "tipo_token": "RP",
+        "valor": ")",
+        "linha": 1
+      }
+      ],
+      "linha": 1
+    },
+{
+      "tipo": "NT",
+      "simbolo": "stmt_list",
+      "filhos": [
+        {
+        "tipo": "NT",
+        "simbolo": "stmt",
+        "filhos": [
+          {
+          "tipo": "TOKEN",
+          "tipo_token": "LP",
+          "valor": "(",
+          "linha": 2
+        },
+{
+          "tipo": "NT",
+          "simbolo": "stmt_inner",
+          "filhos": [
+            {
+            "tipo": "TOKEN",
+            "tipo_token": "NUM_REAL",
+            "valor": "3.14",
+            "linha": 2
+          },
+{
+            "tipo": "NT",
+            "simbolo": "num_real_cont",
+            "filhos": [
+              {
+              "tipo": "TOKEN",
+              "tipo_token": "NUM_REAL",
+              "valor": "2.0",
+              "linha": 2
+            },
+{
+              "tipo": "NT",
+              "simbolo": "arith_op",
+              "filhos": [
+                {
+                "tipo": "TOKEN",
+                "tipo_token": "OP_ADD",
+                "valor": "+",
+                "linha": 2
+              }
+              ],
+              "linha": 2
+            }
+            ],
+            "linha": 2
+          }
+          ],
+          "linha": 2
+        },
+{
+          "tipo": "TOKEN",
+          "tipo_token": "RP",
+          "valor": ")",
+          "linha": 2
+        }
+        ],
+        "linha": 2
+      },
+{
+        "tipo": "NT",
+        "simbolo": "stmt_list",
+        "filhos": [
+          {
+          "tipo": "NT",
+          "simbolo": "stmt",
+          "filhos": [
+            {
+            "tipo": "TOKEN",
+            "tipo_token": "LP",
+            "valor": "(",
+            "linha": 3
+          },
+{
+            "tipo": "NT",
+            "simbolo": "stmt_inner",
+            "filhos": [
+              {
+              "tipo": "TOKEN",
+              "tipo_token": "NUM_REAL",
+              "valor": "5.0",
+              "linha": 3
+            },
+{
+              "tipo": "NT",
+              "simbolo": "num_real_cont",
+              "filhos": [
+                {
+                "tipo": "TOKEN",
+                "tipo_token": "NUM_REAL",
+                "valor": "3.0",
+                "linha": 3
+              },
+{
+                "tipo": "NT",
+                "simbolo": "arith_op",
+                "filhos": [
+                  {
+                  "tipo": "TOKEN",
+                  "tipo_token": "OP_SUB",
+                  "valor": "-",
+                  "linha": 3
+                }
+                ],
+                "linha": 3
+              }
+              ],
+              "linha": 3
+            }
+            ],
+            "linha": 3
+          },
+{
+            "tipo": "TOKEN",
+            "tipo_token": "RP",
+            "valor": ")",
+            "linha": 3
+          }
+          ],
+          "linha": 3
+        },
+{
+          "tipo": "NT",
+          "simbolo": "stmt_list",
+          "filhos": [
+            {
+            "tipo": "NT",
+            "simbolo": "stmt",
+            "filhos": [
+              {
+              "tipo": "TOKEN",
+              "tipo_token": "LP",
+              "valor": "(",
+              "linha": 4
+            },
+{
+              "tipo": "NT",
+              "simbolo": "stmt_inner",
+              "filhos": [
+                {
+                "tipo": "TOKEN",
+                "tipo_token": "NUM_REAL",
+                "valor": "4.0",
+                "linha": 4
+              },
+{
+                "tipo": "NT",
+                "simbolo": "num_real_cont",
+                "filhos": [
+                  {
+                  "tipo": "TOKEN",
+                  "tipo_token": "NUM_REAL",
+                  "valor": "2.0",
+                  "linha": 4
+                },
+{
+                  "tipo": "NT",
+                  "simbolo": "arith_op",
+                  "filhos": [
+                    {
+                    "tipo": "TOKEN",
+                    "tipo_token": "OP_MUL",
+                    "valor": "*",
+                    "linha": 4
+                  }
+                  ],
+                  "linha": 4
+                }
+                ],
+                "linha": 4
+              }
+              ],
+              "linha": 4
+            },
+{
+              "tipo": "TOKEN",
+              "tipo_token": "RP",
+              "valor": ")",
+              "linha": 4
+            }
+            ],
+            "linha": 4
+          },
+{
+            "tipo": "NT",
+            "simbolo": "stmt_list",
+            "filhos": [
+              {
+              "tipo": "NT",
+              "simbolo": "stmt",
+              "filhos": [
+                {
+                "tipo": "TOKEN",
+                "tipo_token": "LP",
+                "valor": "(",
+                "linha": 5
+              },
+{
+                "tipo": "NT",
+                "simbolo": "stmt_inner",
+                "filhos": [
+                  {
+                  "tipo": "TOKEN",
+                  "tipo_token": "NUM_REAL",
+                  "valor": "10.0",
+                  "linha": 5
+                },
+{
+                  "tipo": "NT",
+                  "simbolo": "num_real_cont",
+                  "filhos": [
+                    {
+                    "tipo": "TOKEN",
+                    "tipo_token": "NUM_REAL",
+                    "valor": "3.0",
+                    "linha": 5
+                  },
+{
+                    "tipo": "NT",
+                    "simbolo": "arith_op",
+                    "filhos": [
+                      {
+                      "tipo": "TOKEN",
+                      "tipo_token": "OP_RDIV",
+                      "valor": "|",
+                      "linha": 5
+                    }
+                    ],
+                    "linha": 5
+                  }
+                  ],
+                  "linha": 5
+                }
+                ],
+                "linha": 5
+              },
+{
+                "tipo": "TOKEN",
+                "tipo_token": "RP",
+                "valor": ")",
+                "linha": 5
+              }
+              ],
+              "linha": 5
+            },
+{
+              "tipo": "NT",
+              "simbolo": "stmt_list",
+              "filhos": [
+                {
+                "tipo": "NT",
+                "simbolo": "stmt",
+                "filhos": [
+                  {
+                  "tipo": "TOKEN",
+                  "tipo_token": "LP",
+                  "valor": "(",
+                  "linha": 6
+                },
+{
+                  "tipo": "NT",
+                  "simbolo": "stmt_inner",
+                  "filhos": [
+                    {
+                    "tipo": "TOKEN",
+                    "tipo_token": "NUM_REAL",
+                    "valor": "7.0",
+                    "linha": 6
+                  },
+{
+                    "tipo": "NT",
+                    "simbolo": "num_real_cont",
+                    "filhos": [
+                      {
+                      "tipo": "TOKEN",
+                      "tipo_token": "NUM_REAL",
+                      "valor": "3.0",
+                      "linha": 6
+                    },
+{
+                      "tipo": "NT",
+                      "simbolo": "arith_op",
+                      "filhos": [
+                        {
+                        "tipo": "TOKEN",
+                        "tipo_token": "OP_IDIV",
+                        "valor": "/",
+                        "linha": 6
+                      }
+                      ],
+                      "linha": 6
+                    }
+                    ],
+                    "linha": 6
+                  }
+                  ],
+                  "linha": 6
+                },
+{
+                  "tipo": "TOKEN",
+                  "tipo_token": "RP",
+                  "valor": ")",
+                  "linha": 6
+                }
+                ],
+                "linha": 6
+              },
+{
+                "tipo": "NT",
+                "simbolo": "stmt_list",
+                "filhos": [
+                  {
+                  "tipo": "NT",
+                  "simbolo": "stmt",
+                  "filhos": [
+                    {
+                    "tipo": "TOKEN",
+                    "tipo_token": "LP",
+                    "valor": "(",
+                    "linha": 7
+                  },
+{
+                    "tipo": "NT",
+                    "simbolo": "stmt_inner",
+                    "filhos": [
+                      {
+                      "tipo": "TOKEN",
+                      "tipo_token": "NUM_REAL",
+                      "valor": "10.0",
+                      "linha": 7
+                    },
+{
+                      "tipo": "NT",
+                      "simbolo": "num_real_cont",
+                      "filhos": [
+                        {
+                        "tipo": "TOKEN",
+                        "tipo_token": "NUM_REAL",
+                        "valor": "3.0",
+                        "linha": 7
+                      },
+{
+                        "tipo": "NT",
+                        "simbolo": "arith_op",
+                        "filhos": [
+                          {
+                          "tipo": "TOKEN",
+                          "tipo_token": "OP_MOD",
+                          "valor": "%",
+                          "linha": 7
+                        }
+                        ],
+                        "linha": 7
+                      }
+                      ],
+                      "linha": 7
+                    }
+                    ],
+                    "linha": 7
+                  },
+{
+                    "tipo": "TOKEN",
+                    "tipo_token": "RP",
+                    "valor": ")",
+                    "linha": 7
+                  }
+                  ],
+                  "linha": 7
+                },
+{
+                  "tipo": "NT",
+                  "simbolo": "stmt_list",
+                  "filhos": [
+                    {
+                    "tipo": "NT",
+                    "simbolo": "stmt",
+                    "filhos": [
+                      {
+                      "tipo": "TOKEN",
+                      "tipo_token": "LP",
+                      "valor": "(",
+                      "linha": 8
+                    },
+{
+                      "tipo": "NT",
+                      "simbolo": "stmt_inner",
+                      "filhos": [
+                        {
+                        "tipo": "TOKEN",
+                        "tipo_token": "NUM_REAL",
+                        "valor": "2.0",
+                        "linha": 8
+                      },
+{
+                        "tipo": "NT",
+                        "simbolo": "num_real_cont",
+                        "filhos": [
+                          {
+                          "tipo": "TOKEN",
+                          "tipo_token": "NUM_REAL",
+                          "valor": "8.0",
+                          "linha": 8
+                        },
+{
+                          "tipo": "NT",
+                          "simbolo": "arith_op",
+                          "filhos": [
+                            {
+                            "tipo": "TOKEN",
+                            "tipo_token": "OP_POW",
+                            "valor": "^",
+                            "linha": 8
+                          }
+                          ],
+                          "linha": 8
+                        }
+                        ],
+                        "linha": 8
+                      }
+                      ],
+                      "linha": 8
+                    },
+{
+                      "tipo": "TOKEN",
+                      "tipo_token": "RP",
+                      "valor": ")",
+                      "linha": 8
+                    }
+                    ],
+                    "linha": 8
+                  },
+{
+                    "tipo": "NT",
+                    "simbolo": "stmt_list",
+                    "filhos": [
+                      {
+                      "tipo": "NT",
+                      "simbolo": "stmt",
+                      "filhos": [
+                        {
+                        "tipo": "TOKEN",
+                        "tipo_token": "LP",
+                        "valor": "(",
+                        "linha": 9
+                      },
+{
+                        "tipo": "NT",
+                        "simbolo": "stmt_inner",
+                        "filhos": [
+                          {
+                          "tipo": "TOKEN",
+                          "tipo_token": "NUM_REAL",
+                          "valor": "10.5",
+                          "linha": 9
+                        },
+{
+                          "tipo": "NT",
+                          "simbolo": "num_real_cont",
+                          "filhos": [
+                            {
+                            "tipo": "TOKEN",
+                            "tipo_token": "ID",
+                            "valor": "CONTADOR",
+                            "linha": 9
+                          },
+{
+                            "tipo": "NT",
+                            "simbolo": "after_id_first_arg",
+                            "filhos": [
+                              
+                            ],
+                            "linha": 9
+                          }
+                          ],
+                          "linha": 9
+                        }
+                        ],
+                        "linha": 9
+                      },
+{
+                        "tipo": "TOKEN",
+                        "tipo_token": "RP",
+                        "valor": ")",
+                        "linha": 9
+                      }
+                      ],
+                      "linha": 9
+                    },
+{
+                      "tipo": "NT",
+                      "simbolo": "stmt_list",
+                      "filhos": [
+                        {
+                        "tipo": "NT",
+                        "simbolo": "stmt",
+                        "filhos": [
+                          {
+                          "tipo": "TOKEN",
+                          "tipo_token": "LP",
+                          "valor": "(",
+                          "linha": 10
+                        },
+{
+                          "tipo": "NT",
+                          "simbolo": "stmt_inner",
+                          "filhos": [
+                            {
+                            "tipo": "TOKEN",
+                            "tipo_token": "ID",
+                            "valor": "CONTADOR",
+                            "linha": 10
+                          },
+{
+                            "tipo": "NT",
+                            "simbolo": "id_cont",
+                            "filhos": [
+                              
+                            ],
+                            "linha": 10
+                          }
+                          ],
+                          "linha": 10
+                        },
+{
+                          "tipo": "TOKEN",
+                          "tipo_token": "RP",
+                          "valor": ")",
+                          "linha": 10
+                        }
+                        ],
+                        "linha": 10
+                      },
+{
+                        "tipo": "NT",
+                        "simbolo": "stmt_list",
+                        "filhos": [
+                          {
+                          "tipo": "NT",
+                          "simbolo": "stmt",
+                          "filhos": [
+                            {
+                            "tipo": "TOKEN",
+                            "tipo_token": "LP",
+                            "valor": "(",
+                            "linha": 11
+                          },
+{
+                            "tipo": "NT",
+                            "simbolo": "stmt_inner",
+                            "filhos": [
+                              {
+                              "tipo": "TOKEN",
+                              "tipo_token": "NUM_INT",
+                              "valor": "5",
+                              "linha": 11
+                            },
+{
+                              "tipo": "NT",
+                              "simbolo": "num_int_cont",
+                              "filhos": [
+                                {
+                                "tipo": "TOKEN",
+                                "tipo_token": "KW_RES",
+                                "valor": "RES",
+                                "linha": 11
+                              }
+                              ],
+                              "linha": 11
+                            }
+                            ],
+                            "linha": 11
+                          },
+{
+                            "tipo": "TOKEN",
+                            "tipo_token": "RP",
+                            "valor": ")",
+                            "linha": 11
+                          }
+                          ],
+                          "linha": 11
+                        },
+{
+                          "tipo": "NT",
+                          "simbolo": "stmt_list",
+                          "filhos": [
+                            {
+                            "tipo": "NT",
+                            "simbolo": "stmt",
+                            "filhos": [
+                              {
+                              "tipo": "TOKEN",
+                              "tipo_token": "LP",
+                              "valor": "(",
+                              "linha": 12
+                            },
+{
+                              "tipo": "NT",
+                              "simbolo": "stmt_inner",
+                              "filhos": [
+                                {
+                                "tipo": "TOKEN",
+                                "tipo_token": "LP",
+                                "valor": "(",
+                                "linha": 12
+                              },
+{
+                                "tipo": "NT",
+                                "simbolo": "stmt_inner",
+                                "filhos": [
+                                  {
+                                  "tipo": "TOKEN",
+                                  "tipo_token": "NUM_REAL",
+                                  "valor": "3.0",
+                                  "linha": 12
+                                },
+{
+                                  "tipo": "NT",
+                                  "simbolo": "num_real_cont",
+                                  "filhos": [
+                                    {
+                                    "tipo": "TOKEN",
+                                    "tipo_token": "NUM_REAL",
+                                    "valor": "4.0",
+                                    "linha": 12
+                                  },
+{
+                                    "tipo": "NT",
+                                    "simbolo": "arith_op",
+                                    "filhos": [
+                                      {
+                                      "tipo": "TOKEN",
+                                      "tipo_token": "OP_MUL",
+                                      "valor": "*",
+                                      "linha": 12
+                                    }
+                                    ],
+                                    "linha": 12
+                                  }
+                                  ],
+                                  "linha": 12
+                                }
+                                ],
+                                "linha": 12
+                              },
+{
+                                "tipo": "TOKEN",
+                                "tipo_token": "RP",
+                                "valor": ")",
+                                "linha": 12
+                              },
+{
+                                "tipo": "NT",
+                                "simbolo": "nested_cont",
+                                "filhos": [
+                                  {
+                                  "tipo": "TOKEN",
+                                  "tipo_token": "NUM_REAL",
+                                  "valor": "2.0",
+                                  "linha": 12
+                                },
+{
+                                  "tipo": "NT",
+                                  "simbolo": "any_op",
+                                  "filhos": [
+                                    {
+                                    "tipo": "NT",
+                                    "simbolo": "arith_op",
+                                    "filhos": [
+                                      {
+                                      "tipo": "TOKEN",
+                                      "tipo_token": "OP_ADD",
+                                      "valor": "+",
+                                      "linha": 12
+                                    }
+                                    ],
+                                    "linha": 12
+                                  }
+                                  ],
+                                  "linha": 12
+                                }
+                                ],
+                                "linha": 12
+                              }
+                              ],
+                              "linha": 12
+                            },
+{
+                              "tipo": "TOKEN",
+                              "tipo_token": "RP",
+                              "valor": ")",
+                              "linha": 12
+                            }
+                            ],
+                            "linha": 12
+                          },
+{
+                            "tipo": "NT",
+                            "simbolo": "stmt_list",
+                            "filhos": [
+                              {
+                              "tipo": "NT",
+                              "simbolo": "stmt",
+                              "filhos": [
+                                {
+                                "tipo": "TOKEN",
+                                "tipo_token": "LP",
+                                "valor": "(",
+                                "linha": 13
+                              },
+{
+                                "tipo": "NT",
+                                "simbolo": "stmt_inner",
+                                "filhos": [
+                                  {
+                                  "tipo": "TOKEN",
+                                  "tipo_token": "KW_IF",
+                                  "valor": "IF",
+                                  "linha": 13
+                                },
+{
+                                  "tipo": "NT",
+                                  "simbolo": "stmt",
+                                  "filhos": [
+                                    {
+                                    "tipo": "TOKEN",
+                                    "tipo_token": "LP",
+                                    "valor": "(",
+                                    "linha": 13
+                                  },
+{
+                                    "tipo": "NT",
+                                    "simbolo": "stmt_inner",
+                                    "filhos": [
+                                      {
+                                      "tipo": "TOKEN",
+                                      "tipo_token": "ID",
+                                      "valor": "CONTADOR",
+                                      "linha": 13
+                                    },
+{
+                                      "tipo": "NT",
+                                      "simbolo": "id_cont",
+                                      "filhos": [
+                                        {
+                                        "tipo": "TOKEN",
+                                        "tipo_token": "NUM_REAL",
+                                        "valor": "5.0",
+                                        "linha": 13
+                                      },
+{
+                                        "tipo": "NT",
+                                        "simbolo": "any_op",
+                                        "filhos": [
+                                          {
+                                          "tipo": "NT",
+                                          "simbolo": "rel_op",
+                                          "filhos": [
+                                            {
+                                            "tipo": "TOKEN",
+                                            "tipo_token": "OP_GT",
+                                            "valor": ">",
+                                            "linha": 13
+                                          }
+                                          ],
+                                          "linha": 13
+                                        }
+                                        ],
+                                        "linha": 13
+                                      }
+                                      ],
+                                      "linha": 13
+                                    }
+                                    ],
+                                    "linha": 13
+                                  },
+{
+                                    "tipo": "TOKEN",
+                                    "tipo_token": "RP",
+                                    "valor": ")",
+                                    "linha": 13
+                                  }
+                                  ],
+                                  "linha": 13
+                                },
+{
+                                  "tipo": "NT",
+                                  "simbolo": "stmt",
+                                  "filhos": [
+                                    {
+                                    "tipo": "TOKEN",
+                                    "tipo_token": "LP",
+                                    "valor": "(",
+                                    "linha": 13
+                                  },
+{
+                                    "tipo": "NT",
+                                    "simbolo": "stmt_inner",
+                                    "filhos": [
+                                      {
+                                      "tipo": "TOKEN",
+                                      "tipo_token": "NUM_REAL",
+                                      "valor": "20.0",
+                                      "linha": 13
+                                    },
+{
+                                      "tipo": "NT",
+                                      "simbolo": "num_real_cont",
+                                      "filhos": [
+                                        {
+                                        "tipo": "TOKEN",
+                                        "tipo_token": "ID",
+                                        "valor": "RESULTADO",
+                                        "linha": 13
+                                      },
+{
+                                        "tipo": "NT",
+                                        "simbolo": "after_id_first_arg",
+                                        "filhos": [
+                                          
+                                        ],
+                                        "linha": 13
+                                      }
+                                      ],
+                                      "linha": 13
+                                    }
+                                    ],
+                                    "linha": 13
+                                  },
+{
+                                    "tipo": "TOKEN",
+                                    "tipo_token": "RP",
+                                    "valor": ")",
+                                    "linha": 13
+                                  }
+                                  ],
+                                  "linha": 13
+                                },
+{
+                                  "tipo": "NT",
+                                  "simbolo": "opt_else",
+                                  "filhos": [
+                                    {
+                                    "tipo": "NT",
+                                    "simbolo": "stmt",
+                                    "filhos": [
+                                      {
+                                      "tipo": "TOKEN",
+                                      "tipo_token": "LP",
+                                      "valor": "(",
+                                      "linha": 13
+                                    },
+{
+                                      "tipo": "NT",
+                                      "simbolo": "stmt_inner",
+                                      "filhos": [
+                                        {
+                                        "tipo": "TOKEN",
+                                        "tipo_token": "NUM_REAL",
+                                        "valor": "0.0",
+                                        "linha": 13
+                                      },
+{
+                                        "tipo": "NT",
+                                        "simbolo": "num_real_cont",
+                                        "filhos": [
+                                          {
+                                          "tipo": "TOKEN",
+                                          "tipo_token": "ID",
+                                          "valor": "RESULTADO",
+                                          "linha": 13
+                                        },
+{
+                                          "tipo": "NT",
+                                          "simbolo": "after_id_first_arg",
+                                          "filhos": [
+                                            
+                                          ],
+                                          "linha": 13
+                                        }
+                                        ],
+                                        "linha": 13
+                                      }
+                                      ],
+                                      "linha": 13
+                                    },
+{
+                                      "tipo": "TOKEN",
+                                      "tipo_token": "RP",
+                                      "valor": ")",
+                                      "linha": 13
+                                    }
+                                    ],
+                                    "linha": 13
+                                  }
+                                  ],
+                                  "linha": 13
+                                }
+                                ],
+                                "linha": 13
+                              },
+{
+                                "tipo": "TOKEN",
+                                "tipo_token": "RP",
+                                "valor": ")",
+                                "linha": 13
+                              }
+                              ],
+                              "linha": 13
+                            },
+{
+                              "tipo": "NT",
+                              "simbolo": "stmt_list",
+                              "filhos": [
+                                {
+                                "tipo": "NT",
+                                "simbolo": "stmt",
+                                "filhos": [
+                                  {
+                                  "tipo": "TOKEN",
+                                  "tipo_token": "LP",
+                                  "valor": "(",
+                                  "linha": 14
+                                },
+{
+                                  "tipo": "NT",
+                                  "simbolo": "stmt_inner",
+                                  "filhos": [
+                                    {
+                                    "tipo": "TOKEN",
+                                    "tipo_token": "KW_WHILE",
+                                    "valor": "WHILE",
+                                    "linha": 14
+                                  },
+{
+                                    "tipo": "NT",
+                                    "simbolo": "stmt",
+                                    "filhos": [
+                                      {
+                                      "tipo": "TOKEN",
+                                      "tipo_token": "LP",
+                                      "valor": "(",
+                                      "linha": 14
+                                    },
+{
+                                      "tipo": "NT",
+                                      "simbolo": "stmt_inner",
+                                      "filhos": [
+                                        {
+                                        "tipo": "TOKEN",
+                                        "tipo_token": "ID",
+                                        "valor": "CONTADOR",
+                                        "linha": 14
+                                      },
+{
+                                        "tipo": "NT",
+                                        "simbolo": "id_cont",
+                                        "filhos": [
+                                          {
+                                          "tipo": "TOKEN",
+                                          "tipo_token": "NUM_REAL",
+                                          "valor": "10.0",
+                                          "linha": 14
+                                        },
+{
+                                          "tipo": "NT",
+                                          "simbolo": "any_op",
+                                          "filhos": [
+                                            {
+                                            "tipo": "NT",
+                                            "simbolo": "rel_op",
+                                            "filhos": [
+                                              {
+                                              "tipo": "TOKEN",
+                                              "tipo_token": "OP_LT",
+                                              "valor": "<",
+                                              "linha": 14
+                                            }
+                                            ],
+                                            "linha": 14
+                                          }
+                                          ],
+                                          "linha": 14
+                                        }
+                                        ],
+                                        "linha": 14
+                                      }
+                                      ],
+                                      "linha": 14
+                                    },
+{
+                                      "tipo": "TOKEN",
+                                      "tipo_token": "RP",
+                                      "valor": ")",
+                                      "linha": 14
+                                    }
+                                    ],
+                                    "linha": 14
+                                  },
+{
+                                    "tipo": "NT",
+                                    "simbolo": "stmt",
+                                    "filhos": [
+                                      {
+                                      "tipo": "TOKEN",
+                                      "tipo_token": "LP",
+                                      "valor": "(",
+                                      "linha": 14
+                                    },
+{
+                                      "tipo": "NT",
+                                      "simbolo": "stmt_inner",
+                                      "filhos": [
+                                        {
+                                        "tipo": "TOKEN",
+                                        "tipo_token": "LP",
+                                        "valor": "(",
+                                        "linha": 14
+                                      },
+{
+                                        "tipo": "NT",
+                                        "simbolo": "stmt_inner",
+                                        "filhos": [
+                                          {
+                                          "tipo": "TOKEN",
+                                          "tipo_token": "ID",
+                                          "valor": "CONTADOR",
+                                          "linha": 14
+                                        },
+{
+                                          "tipo": "NT",
+                                          "simbolo": "id_cont",
+                                          "filhos": [
+                                            {
+                                            "tipo": "TOKEN",
+                                            "tipo_token": "NUM_REAL",
+                                            "valor": "1.0",
+                                            "linha": 14
+                                          },
+{
+                                            "tipo": "NT",
+                                            "simbolo": "any_op",
+                                            "filhos": [
+                                              {
+                                              "tipo": "NT",
+                                              "simbolo": "arith_op",
+                                              "filhos": [
+                                                {
+                                                "tipo": "TOKEN",
+                                                "tipo_token": "OP_ADD",
+                                                "valor": "+",
+                                                "linha": 14
+                                              }
+                                              ],
+                                              "linha": 14
+                                            }
+                                            ],
+                                            "linha": 14
+                                          }
+                                          ],
+                                          "linha": 14
+                                        }
+                                        ],
+                                        "linha": 14
+                                      },
+{
+                                        "tipo": "TOKEN",
+                                        "tipo_token": "RP",
+                                        "valor": ")",
+                                        "linha": 14
+                                      },
+{
+                                        "tipo": "NT",
+                                        "simbolo": "nested_cont",
+                                        "filhos": [
+                                          {
+                                          "tipo": "TOKEN",
+                                          "tipo_token": "ID",
+                                          "valor": "CONTADOR",
+                                          "linha": 14
+                                        },
+{
+                                          "tipo": "NT",
+                                          "simbolo": "after_id_nested",
+                                          "filhos": [
+                                            
+                                          ],
+                                          "linha": 14
+                                        }
+                                        ],
+                                        "linha": 14
+                                      }
+                                      ],
+                                      "linha": 14
+                                    },
+{
+                                      "tipo": "TOKEN",
+                                      "tipo_token": "RP",
+                                      "valor": ")",
+                                      "linha": 14
+                                    }
+                                    ],
+                                    "linha": 14
+                                  }
+                                  ],
+                                  "linha": 14
+                                },
+{
+                                  "tipo": "TOKEN",
+                                  "tipo_token": "RP",
+                                  "valor": ")",
+                                  "linha": 14
+                                }
+                                ],
+                                "linha": 14
+                              },
+{
+                                "tipo": "NT",
+                                "simbolo": "stmt_list",
+                                "filhos": [
+                                  {
+                                  "tipo": "NT",
+                                  "simbolo": "stmt",
+                                  "filhos": [
+                                    {
+                                    "tipo": "TOKEN",
+                                    "tipo_token": "LP",
+                                    "valor": "(",
+                                    "linha": 15
+                                  },
+{
+                                    "tipo": "NT",
+                                    "simbolo": "stmt_inner",
+                                    "filhos": [
+                                      {
+                                      "tipo": "TOKEN",
+                                      "tipo_token": "KW_END",
+                                      "valor": "END",
+                                      "linha": 15
+                                    }
+                                    ],
+                                    "linha": 15
+                                  },
+{
+                                    "tipo": "TOKEN",
+                                    "tipo_token": "RP",
+                                    "valor": ")",
+                                    "linha": 15
+                                  }
+                                  ],
+                                  "linha": 15
+                                },
+{
+                                  "tipo": "NT",
+                                  "simbolo": "stmt_list",
+                                  "filhos": [
+                                    
+                                  ],
+                                  "linha": 1
+                                }
+                                ],
+                                "linha": 15
+                              }
+                              ],
+                              "linha": 14
+                            }
+                            ],
+                            "linha": 13
+                          }
+                          ],
+                          "linha": 12
+                        }
+                        ],
+                        "linha": 11
+                      }
+                      ],
+                      "linha": 10
+                    }
+                    ],
+                    "linha": 9
+                  }
+                  ],
+                  "linha": 8
+                }
+                ],
+                "linha": 7
+              }
+              ],
+              "linha": 6
+            }
+            ],
+            "linha": 5
+          }
+          ],
+          "linha": 4
+        }
+        ],
+        "linha": 3
+      }
+      ],
+      "linha": 2
+    }
+    ],
+    "linha": 1
+  },
+{
+    "tipo": "TOKEN",
+    "tipo_token": "EOF",
+    "valor": "",
+    "linha": 16
+  }
+  ],
+  "linha": 1
+}
