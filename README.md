@@ -1,4 +1,4 @@
-# RA3_19 — Analisador Sintático LL(1)
+# RA3_19 — Compilador RPN (Fases 1–3)
 
 **Instituição:** Pontifícia Universidade Católica do Paraná (PUCPR)  
 **Disciplina:** Linguagens Formais e Compiladores (LFC) — 2026/1  
@@ -14,10 +14,11 @@
 
 ## Descrição
 
-Este projeto implementa um compilador para uma linguagem de programação simplificada em **Notação Polonesa Reversa (RPN)**, desenvolvido em duas fases:
+Este projeto implementa um compilador para uma linguagem de programação simplificada em **Notação Polonesa Reversa (RPN)**, desenvolvido em três fases:
 
 - **Fase 1** (`lexer.py`): analisador léxico com autômato finito determinístico (AFD).
 - **Fase 2** (`AnalisadorSintatico.py`): analisador sintático LL(1), geração de árvore sintática e geração de código Assembly ARMv7 para Cpulator-ARMv7 DEC1-SOC(v16.1).
+- **Fase 3** (`AnalisadorSemantico.py`): analisador semântico — comentários `*{…}*`, tabela de símbolos, verificação de tipos e geração de Assembly a partir da árvore atribuída.
 
 ---
 
@@ -87,15 +88,21 @@ Exemplos:
 
 - Python 3.10 ou superior (sem dependências externas)
 
-### Executar o compilador (Fase 2)
+### Executar o compilador completo (Fase 3)
 
 ```bash
-python AnalisadorSintatico.py <arquivo.txt>
+python AnalisadorSemantico.py <arquivo.txt>
 ```
 
 Exemplo:
 ```bash
-python AnalisadorSintatico.py teste1.txt
+python AnalisadorSemantico.py teste1.txt
+```
+
+### Executar o compilador Fase 2 (léxico + sintático + Assembly)
+
+```bash
+python AnalisadorSintatico.py <arquivo.txt>
 ```
 
 **Saídas geradas:**
@@ -104,23 +111,28 @@ python AnalisadorSintatico.py teste1.txt
 |---------|----------|
 | `arvore.json` | Árvore sintática em formato JSON |
 | `programa.asm` | Código Assembly ARMv7 pronto para Cpulator |
-
-### Executar o analisador léxico (Fase 1)
-
-```bash
-python lexer.py teste1.txt
-```
+| `tabela_simbolos.md` | Tabela de símbolos (Fase 3) |
+| `erros_tipos.md` | Relatório de erros semânticos de tipo (Fase 3) |
 
 ### Executar os testes unitários
 
 ```bash
-# Testes da gramática LL(1) (FIRST, FOLLOW, tabela)
+# Fase 3 — Aluno 1: léxico com comentários e prepararEntradaSemantica
+python AnalisadorSemantico.py --test-preparar
+
+# Fase 3 — Aluno 2: construirTabelaSimbolos
+python AnalisadorSemantico.py --test-construir
+
+# Fase 3 — Aluno 3: verificarTipos
+python AnalisadorSemantico.py --test-verificar
+
+# Fase 2 — gramática LL(1) (FIRST, FOLLOW, tabela)
 python AnalisadorSintatico.py --test-gramatica
 
-# Testes do parser LL(1)
+# Fase 2 — parser LL(1)
 python AnalisadorSintatico.py --test-parsear
 
-# Testes do analisador léxico
+# Fase 2 — analisador léxico
 python AnalisadorSintatico.py --test-lerTokens
 ```
 
@@ -130,11 +142,11 @@ python AnalisadorSintatico.py --test-lerTokens
 
 | Arquivo | Descrição |
 |---------|-----------|
-| `teste1.txt` | Todas as operações aritméticas, IF, WHILE, MEM, RES |
-| `teste2.txt` | Operações com variáveis, operadores relacionais, IF com `>=` |
-| `teste3.txt` | Expressões aninhadas, IF com `!=`, WHILE com incremento por 10 |
-| `teste_erros.txt` | Erro léxico intencional (`@`) para validar recuperação de erros |
-| `teste_erro_sintatico.txt` | Erro sintático intencional (operando extra após operador) |
+| `teste1.txt` | Programa válido: todos os ops, IF, WHILE, vars, TRUE/FALSE, comentários |
+| `teste2.txt` | Erros semânticos intencionais (6 casos documentados nos comentários) |
+| `teste3.txt` | Programa complexo: aninhamento de 3 níveis, todos os tipos, todos os ops |
+| `teste_erros.txt` | Erro léxico intencional (`@` na linha 13) |
+| `teste_erro_sintatico.txt` | Erro sintático intencional (token extra após operador) |
 
 Para testar tratamento de erros:
 ```bash
@@ -150,8 +162,11 @@ python AnalisadorSintatico.py teste_erro_sintatico.txt
 ## Documentação Técnica
 
 - [`GRAMATICA.md`](GRAMATICA.md) — Gramática LL(1) completa: produções, conjuntos FIRST e FOLLOW, tabela de análise, e árvore sintática de exemplo.
+- [`REGRAS_TIPOS.md`](REGRAS_TIPOS.md) — Sistema de regras de validação de tipos em cálculo de sequentes (Aluno 3).
 - [`arvore.json`](arvore.json) — Árvore sintática da última execução.
 - [`programa.asm`](programa.asm) — Assembly gerado pela última execução.
+- `tabela_simbolos.md` — Tabela de símbolos gerada por `salvarTabelaSimbolos()` (gerado na execução).
+- `erros_tipos.md` — Relatório de erros de tipo gerado por `salvarErrosTipos()` (gerado na execução).
 
 ---
 

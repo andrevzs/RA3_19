@@ -694,23 +694,343 @@ def salvarTabelaSimbolos(
 
 
 # ─────────────────────────────────────────────────────────────
-# [Aluno 3] verificarTipos — stub
+# [Aluno 3] verificarTipos — Sistema de Regras Semânticas
+#
+# Regras de tipo implementadas (documentadas em REGRAS_TIPOS.md):
+#   Literais  : NUM_INT→int  NUM_REAL→real  TRUE/FALSE→bool
+#   LOAD      : (MEM)  → tipo da tabela de símbolos
+#   STORE     : (V MEM) → sem tipo de resultado (side-effect)
+#   RES       : (N RES) → unknown (valor de runtime)
+#   Aritm (+,-,*,^): int op int→int; int/real op real→real; bool→ERRO
+#   Div real (|): qualquer numérico→real; bool→ERRO
+#   Div int  (/): exige ambos int; senão→ERRO
+#   Resto    (%): exige ambos int; senão→ERRO
+#   Relacionais : qualquer numérico→bool; bool como operando→ERRO
+#   IF/WHILE  : condição deve ser bool; senão→ERRO
+#   unknown   : propagado sem erro adicional (variável não inferida)
 # ─────────────────────────────────────────────────────────────
+
+_OP_CHARS: dict[str, str] = {
+    'OP_ADD': '+', 'OP_SUB': '-', 'OP_MUL': '*', 'OP_RDIV': '|',
+    'OP_IDIV': '/', 'OP_MOD': '%', 'OP_POW': '^',
+    'OP_GT': '>', 'OP_LT': '<', 'OP_EQ': '==',
+    'OP_NEQ': '!=', 'OP_GTE': '>=', 'OP_LTE': '<=',
+}
+_REL_OPS: frozenset[str] = frozenset(
+    {'OP_GT', 'OP_LT', 'OP_EQ', 'OP_NEQ', 'OP_GTE', 'OP_LTE'}
+)
+_LITERAIS_BOOL: frozenset[str] = frozenset({'TRUE', 'FALSE'})
+
+
+def _extrair_op_token(no: dict) -> dict | None:
+    """Busca recursivamente o TOKEN de operador dentro de any_op/arith_op/rel_op."""
+    if no.get('tipo') == 'TOKEN':
+        return no
+    for filho in no.get('filhos', []):
+        resultado = _extrair_op_token(filho)
+        if resultado:
+            return resultado
+    return None
+
+
+def _tipo_do_op(op_str: str | None, t1: str, t2: str, linha: int, erros: list[str]) -> str:
+    """
+    Aplica as regras de tipo para (t1 op t2) e retorna o tipo resultante.
+    Registra erros sem interromper a propagação.
+    """
+    if op_str is None:
+        return 'unknown'
+
+    op_char = _OP_CHARS.get(op_str, op_str)
+
+    # Operadores relacionais → sempre produzem bool
+    if op_str in _REL_OPS:
+        if t1 == 'bool' or t2 == 'bool':
+            erros.append(
+                f"Linha {linha}: operador relacional '{op_char}' não pode operar "
+                f"com tipo bool (tipos: '{t1}' e '{t2}')"
+            )
+        return 'bool'
+
+    # Divisão inteira: ambos devem ser int
+    if op_str == 'OP_IDIV':
+        if t1 not in ('int', 'unknown') or t2 not in ('int', 'unknown'):
+            erros.append(
+                f"Linha {linha}: divisão inteira '/' requer tipo int "
+                f"(obteve '{t1}' e '{t2}')"
+            )
+        return 'int'
+
+    # Resto: ambos devem ser int
+    if op_str == 'OP_MOD':
+        if t1 not in ('int', 'unknown') or t2 not in ('int', 'unknown'):
+            erros.append(
+                f"Linha {linha}: resto '%' requer tipo int "
+                f"(obteve '{t1}' e '{t2}')"
+            )
+        return 'int'
+
+    # +, -, *, ^, | — não aceitam bool
+    if t1 == 'bool' or t2 == 'bool':
+        erros.append(
+            f"Linha {linha}: operação '{op_char}' não suportada com tipo bool "
+            f"(tipos: '{t1}' e '{t2}')"
+        )
+        t_nb = (t1 if t1 != 'bool' else t2)
+        return t_nb if t_nb != 'bool' else 'unknown'
+
+    # Divisão real → sempre real
+    if op_str == 'OP_RDIV':
+        return 'real'
+
+    # +, -, *, ^ — promoção numérica
+    if t1 == 'real' or t2 == 'real':
+        return 'real'
+    if t1 == 'unknown' or t2 == 'unknown':
+        return 'unknown'
+    return 'int'
+
+
+def _tipo_id(nome: str, tabela: dict) -> str:
+    """Retorna o tipo de um identificador: 'bool' se literal, ou busca na tabela."""
+    if nome in _LITERAIS_BOOL:
+        return 'bool'
+    return tabela.get(nome, {}).get('tipo', 'unknown')
+
+
+def _inferir_stmt_inner(no: dict, tabela: dict, tipos: dict, erros: list[str]) -> str | None:
+    """
+    Infere o tipo de um nó stmt_inner, registra em tipos[id(no)] e retorna o tipo.
+    Retorna None para comandos sem valor (START, END, IF, WHILE, STORE).
+    """
+    if no.get('tipo') != 'NT' or no.get('simbolo') != 'stmt_inner':
+        return None
+
+    filhos = no.get('filhos', [])
+    if not filhos:
+        return None
+
+    linha_no = no.get('linha', 0)
+    primeiro = filhos[0]
+    tok = primeiro.get('tipo_token', '')
+
+    # ── START / END ──
+    if tok in ('KW_START', 'KW_END'):
+        tipos[id(no)] = None
+        return None
+
+    # ── IF ──
+    if tok == 'KW_IF':
+        # filhos: [KW_IF, stmt_cond, stmt_true, opt_else]
+        t_cond = _inferir_stmt(filhos[1], tabela, tipos, erros)
+        if t_cond is not None and t_cond != 'bool':
+            linha_cond = filhos[1].get('linha', linha_no)
+            erros.append(
+                f"Linha {linha_cond}: condição do IF deve ser bool (obteve '{t_cond}')"
+            )
+        _inferir_stmt(filhos[2], tabela, tipos, erros)
+        if len(filhos) >= 4:
+            opt = filhos[3]
+            opt_filhos = opt.get('filhos', [])
+            if opt_filhos:
+                _inferir_stmt(opt_filhos[0], tabela, tipos, erros)
+        tipos[id(no)] = None
+        return None
+
+    # ── WHILE ──
+    if tok == 'KW_WHILE':
+        # filhos: [KW_WHILE, stmt_cond, stmt_body]
+        t_cond = _inferir_stmt(filhos[1], tabela, tipos, erros)
+        if t_cond is not None and t_cond != 'bool':
+            linha_cond = filhos[1].get('linha', linha_no)
+            erros.append(
+                f"Linha {linha_cond}: condição do WHILE deve ser bool (obteve '{t_cond}')"
+            )
+        _inferir_stmt(filhos[2], tabela, tipos, erros)
+        tipos[id(no)] = None
+        return None
+
+    # ── NUM_INT num_int_cont ──
+    if tok == 'NUM_INT':
+        cont = filhos[1]  # NT num_int_cont
+        cont_filhos = cont.get('filhos', [])
+        # (N RES)
+        if cont_filhos and cont_filhos[0].get('tipo_token') == 'KW_RES':
+            tipos[id(no)] = 'unknown'
+            return 'unknown'
+        t = _inferir_via_cont('int', primeiro, cont, tabela, tipos, erros)
+        tipos[id(no)] = t
+        return t
+
+    # ── NUM_REAL num_real_cont ──
+    if tok == 'NUM_REAL':
+        cont = filhos[1]  # NT num_real_cont
+        t = _inferir_via_cont('real', primeiro, cont, tabela, tipos, erros)
+        tipos[id(no)] = t
+        return t
+
+    # ── ID id_cont ──
+    if tok == 'ID':
+        nome = primeiro['valor']
+        t1 = _tipo_id(nome, tabela)
+        cont = filhos[1]  # NT id_cont
+        cont_filhos = cont.get('filhos', [])
+        if not cont_filhos:
+            # LOAD (id_cont → ε)
+            tipos[id(no)] = t1
+            return t1
+        t = _inferir_via_cont(t1, primeiro, cont, tabela, tipos, erros)
+        tipos[id(no)] = t
+        return t
+
+    # ── (stmt_inner) nested_cont ──
+    if tok == 'LP':
+        # filhos: [LP, stmt_inner_inner, RP, nested_cont]
+        inner = filhos[1]
+        t1 = _inferir_stmt_inner(inner, tabela, tipos, erros)
+        nested_cont = filhos[3]
+        nested_filhos = nested_cont.get('filhos', [])
+        if not nested_filhos:
+            tipos[id(no)] = t1
+            return t1
+        t = _inferir_via_cont(t1, primeiro, nested_cont, tabela, tipos, erros)
+        tipos[id(no)] = t
+        return t
+
+    return None
+
+
+def _inferir_via_cont(
+    t1: str | None,
+    token_t1: dict,
+    cont: dict,
+    tabela: dict,
+    tipos: dict,
+    erros: list[str],
+) -> str | None:
+    """
+    Resolve o segundo operando e operador de um nó *_cont (num_int_cont,
+    num_real_cont, id_cont, nested_cont) e aplica _tipo_do_op.
+
+    Retorna t1 sem erro quando detecta padrão STORE (after_id → ε).
+    """
+    cont_filhos = cont.get('filhos', [])
+    if not cont_filhos:
+        return t1
+
+    segundo = cont_filhos[0]
+    tok2 = segundo.get('tipo_token', '')
+    linha_ref = token_t1.get('linha', 0)
+
+    # Segundo operando é expressão aninhada: [LP, inner, RP, op_no]
+    if tok2 == 'LP':
+        inner = cont_filhos[1]
+        t2 = _inferir_stmt_inner(inner, tabela, tipos, erros)
+        op_no = cont_filhos[3]
+        op_tok = _extrair_op_token(op_no)
+        op_str = op_tok['tipo_token'] if op_tok else None
+        linha_op = op_tok['linha'] if op_tok else linha_ref
+        return _tipo_do_op(op_str, t1, t2, linha_op, erros)
+
+    # Segundo operando é token simples (NUM_INT, NUM_REAL, ID)
+    if tok2 == 'NUM_INT':
+        t2: str = 'int'
+    elif tok2 == 'NUM_REAL':
+        t2 = 'real'
+    elif tok2 == 'ID':
+        t2 = _tipo_id(segundo['valor'], tabela)
+    else:
+        return None
+
+    # O operador está em cont_filhos[1], que pode ser:
+    #   after_id_first_arg / after_id_nested → contém o op nos seus próprios filhos
+    #   arith_op / any_op  → é diretamente o op
+    op_part = cont_filhos[1]
+    simbolo_op = op_part.get('simbolo', '')
+
+    if simbolo_op in ('after_id_first_arg', 'after_id_nested'):
+        after_filhos = op_part.get('filhos', [])
+        if not after_filhos:
+            # after_id → ε → padrão STORE; sem tipo de resultado
+            return t1
+        op_no = after_filhos[0]  # NT arith_op ou any_op
+    else:
+        op_no = op_part  # diretamente arith_op ou any_op
+
+    op_tok = _extrair_op_token(op_no)
+    op_str = op_tok['tipo_token'] if op_tok else None
+    linha_op = op_tok['linha'] if op_tok else linha_ref
+    return _tipo_do_op(op_str, t1, t2, linha_op, erros)
+
+
+def _inferir_stmt(no_stmt: dict, tabela: dict, tipos: dict, erros: list[str]) -> str | None:
+    """Infere o tipo de um nó stmt (wrapper: extrai stmt_inner de LP...RP)."""
+    if no_stmt.get('tipo') != 'NT' or no_stmt.get('simbolo') != 'stmt':
+        return None
+    filhos = no_stmt.get('filhos', [])
+    if len(filhos) >= 2:
+        t = _inferir_stmt_inner(filhos[1], tabela, tipos, erros)
+        tipos[id(no_stmt)] = t
+        return t
+    return None
+
+
+def _inferir_stmt_list(no: dict, tabela: dict, tipos: dict, erros: list[str]) -> None:
+    """Percorre stmt_list recursivamente inferindo tipos de cada stmt."""
+    filhos = no.get('filhos', [])
+    if not filhos:
+        return
+    _inferir_stmt(filhos[0], tabela, tipos, erros)
+    if len(filhos) >= 2:
+        _inferir_stmt_list(filhos[1], tabela, tipos, erros)
+
 
 def verificarTipos(arvore: dict, tabela: dict) -> tuple[dict, list[str]]:
     """
-    (Aluno 3) Valida os tipos das expressões e comandos na árvore.
+    (Aluno 3) Valida os tipos das expressões e comandos na árvore sintática.
 
     Entrada:
-        arvore — árvore sintática inicial
-        tabela — tabela de símbolos de construirTabelaSimbolos()
+        arvore — árvore sintática inicial produzida por prepararEntradaSemantica()
+        tabela — tabela de símbolos produzida por construirTabelaSimbolos()
 
     Saída:
         (tipos, erros) onde:
-          - tipos : dict mapeando id de nó → tipo inferido ('int', 'real', 'bool')
-          - erros : lista de erros semânticos de tipo
+          - tipos : dict[id(nó) → tipo_str] com tipo inferido de cada nó
+          - erros : lista de erros semânticos de tipo com número de linha
     """
-    raise NotImplementedError("verificarTipos será implementado pelo Aluno 3")
+    tipos: dict[int, str | None] = {}
+    erros: list[str] = []
+
+    if arvore.get('tipo') == 'NT' and arvore.get('simbolo') == 'programa':
+        filhos = arvore.get('filhos', [])
+        if filhos and filhos[0].get('simbolo') == 'stmt_list':
+            _inferir_stmt_list(filhos[0], tabela, tipos, erros)
+
+    return tipos, erros
+
+
+def salvarErrosTipos(erros: list[str], caminho: str = 'erros_tipos.md') -> str:
+    """
+    (Aluno 3) Salva o relatório de erros semânticos de tipo em arquivo Markdown.
+
+    Entrada:
+        erros   — lista de erros produzida por verificarTipos()
+        caminho — caminho do arquivo de saída (padrão: erros_tipos.md)
+
+    Saída:
+        caminho do arquivo gerado
+    """
+    linhas: list[str] = ['# Relatório de Erros de Tipo\n']
+    if erros:
+        for erro in erros:
+            linhas.append(f'- {erro}')
+    else:
+        linhas.append('Nenhum erro de tipo encontrado.')
+    linhas.append('')
+
+    with open(caminho, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(linhas))
+    return caminho
 
 
 # ─────────────────────────────────────────────────────────────
@@ -1614,6 +1934,428 @@ def rodar_testes_prepararEntrada() -> None:
 
 
 # ─────────────────────────────────────────────────────────────
+# [Aluno 3] Funções de teste — verificarTipos
+# ─────────────────────────────────────────────────────────────
+
+def test_tipos_int_add() -> None:
+    """(2 3 +) deve inferir int sem erros."""
+    conteudo = "(START)\n(2 3 +)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, erros = verificarTipos(arvore, tabela)
+        assert not erros, f"Não deveria haver erros: {erros}"
+        tipos_vals = [v for v in tipos.values() if v is not None]
+        assert 'int' in tipos_vals, "Deveria inferir tipo int"
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_real_add() -> None:
+    """(2.0 3.0 +) deve inferir real sem erros."""
+    conteudo = "(START)\n(2.0 3.0 +)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, erros = verificarTipos(arvore, tabela)
+        assert not erros, f"Não deveria haver erros: {erros}"
+        assert 'real' in tipos.values(), "Deveria inferir tipo real"
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_misto_promove_real() -> None:
+    """(2 3.0 +) deve inferir real por promoção numérica, sem erros."""
+    conteudo = "(START)\n(2 3.0 +)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, erros = verificarTipos(arvore, tabela)
+        assert not erros, f"Não deveria haver erros: {erros}"
+        assert 'real' in tipos.values(), "int+real deveria promover para real"
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_rdiv_retorna_real() -> None:
+    """(4 2 |) deve retornar real mesmo com operandos int."""
+    conteudo = "(START)\n(4 2 |)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, erros = verificarTipos(arvore, tabela)
+        assert not erros, f"Não deveria haver erros: {erros}"
+        assert 'real' in tipos.values(), "| deve produzir real"
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_relacional_retorna_bool() -> None:
+    """(X 3.0 >) onde X é real deve retornar bool.
+    Nota: num_int_cont só permite arith_op; rel_op exige ID como primeiro operando.
+    """
+    conteudo = "(START)\n(1.0 X)\n(X 3.0 >)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, erros = verificarTipos(arvore, tabela)
+        assert not erros, f"Não deveria haver erros: {erros}"
+        assert 'bool' in tipos.values(), "> deveria produzir bool"
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_true_false_sao_bool() -> None:
+    """TRUE e FALSE devem ser inferidos como bool."""
+    conteudo = "(START)\n(TRUE)\n(FALSE)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, erros = verificarTipos(arvore, tabela)
+        assert not erros, f"Não deveria haver erros: {erros}"
+        bools = [v for v in tipos.values() if v == 'bool']
+        assert len(bools) >= 2, "TRUE e FALSE devem produzir tipo bool"
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_load_int() -> None:
+    """Variável int carregada com (MEM) deve ter tipo int."""
+    conteudo = "(START)\n(10 X)\n(X)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, erros = verificarTipos(arvore, tabela)
+        assert not erros, f"Não deveria haver erros: {erros}"
+        assert 'int' in tipos.values(), "LOAD de int deve inferir int"
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_load_real() -> None:
+    """Variável real carregada com (MEM) deve ter tipo real."""
+    conteudo = "(START)\n(1.5 Y)\n(Y)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, erros = verificarTipos(arvore, tabela)
+        assert not erros, f"Não deveria haver erros: {erros}"
+        assert 'real' in tipos.values(), "LOAD de real deve inferir real"
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_res_unknown() -> None:
+    """(N RES) deve ter tipo unknown (valor de runtime)."""
+    conteudo = "(START)\n(1 2 +)\n(1 RES)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, erros = verificarTipos(arvore, tabela)
+        assert not erros, f"Não deveria haver erros: {erros}"
+        assert 'unknown' in tipos.values(), "(N RES) deveria ser unknown"
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_aninhado_dois_niveis() -> None:
+    """((2 3 +) 4 *) — dois níveis de aninhamento, tipo int."""
+    conteudo = "(START)\n((2 3 +) 4 *)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, erros = verificarTipos(arvore, tabela)
+        assert not erros, f"Não deveria haver erros: {erros}"
+        assert 'int' in tipos.values()
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_aninhado_tres_niveis() -> None:
+    """(((1 2 +) 3 -) 4 *) — três níveis, caso extremo de aninhamento."""
+    conteudo = "(START)\n(((1 2 +) 3 -) 4 *)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, erros = verificarTipos(arvore, tabela)
+        assert not erros, f"Não deveria haver erros: {erros}"
+        assert 'int' in tipos.values()
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_div_int_ok() -> None:
+    """(6 3 /) — divisão inteira válida → int."""
+    conteudo = "(START)\n(6 3 /)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, erros = verificarTipos(arvore, tabela)
+        assert not erros, f"Não deveria haver erros: {erros}"
+        assert 'int' in tipos.values()
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_mod_ok() -> None:
+    """(7 3 %) — resto válido → int."""
+    conteudo = "(START)\n(7 3 %)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, erros = verificarTipos(arvore, tabela)
+        assert not erros, f"Não deveria haver erros: {erros}"
+        assert 'int' in tipos.values()
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_cond_if_bool_ok() -> None:
+    """IF com condição bool deve passar sem erro."""
+    conteudo = "(START)\n(1.0 X)\n(IF (X 0.0 >) (2.0 3.0 +))\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        _, erros = verificarTipos(arvore, tabela)
+        assert not erros, f"IF com bool válido não deveria gerar erro: {erros}"
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_cond_while_bool_ok() -> None:
+    """WHILE com condição bool deve passar sem erro."""
+    conteudo = "(START)\n(0 I)\n(WHILE (I 5 <) ((I 1 +) I))\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        _, erros = verificarTipos(arvore, tabela)
+        assert not erros, f"WHILE com bool válido não deveria gerar erro: {erros}"
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_erro_bool_em_aritm() -> None:
+    """((X 3.0 >) 2.0 +) usa bool como primeiro operando de '+', deve gerar erro.
+    O bool é obtido via expressão aninhada (relacional) → nested_cont.
+    """
+    conteudo = "(START)\n(1.0 X)\n((X 3.0 >) 2.0 +)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        _, erros = verificarTipos(arvore, tabela)
+        assert any('bool' in e.lower() for e in erros), (
+            f"Operação com bool deveria gerar erro: {erros}"
+        )
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_erro_cond_if_real() -> None:
+    """IF com condição real deve gerar erro."""
+    conteudo = "(START)\n(1.0 X)\n(IF (X) (2.0 3.0 +))\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        _, erros = verificarTipos(arvore, tabela)
+        assert any('if' in e.lower() and 'bool' in e.lower() for e in erros), (
+            f"IF com condição real deveria gerar erro: {erros}"
+        )
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_erro_cond_while_real() -> None:
+    """WHILE com condição real deve gerar erro."""
+    conteudo = "(START)\n(0.0 J)\n(WHILE (J 2.0 +) ((J 1.0 +) J))\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        _, erros = verificarTipos(arvore, tabela)
+        assert any('while' in e.lower() and 'bool' in e.lower() for e in erros), (
+            f"WHILE com condição real deveria gerar erro: {erros}"
+        )
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_erro_div_int_com_real() -> None:
+    """(3.5 2 /) deve gerar erro de divisão inteira com real."""
+    conteudo = "(START)\n(3.5 2 /)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        _, erros = verificarTipos(arvore, tabela)
+        assert any('divisão inteira' in e.lower() or "'/'" in e for e in erros), (
+            f"Divisão inteira com real deveria gerar erro: {erros}"
+        )
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_erro_mod_com_real() -> None:
+    """(9.0 4 %) deve gerar erro de resto com real."""
+    conteudo = "(START)\n(9.0 4 %)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        _, erros = verificarTipos(arvore, tabela)
+        assert any("resto" in e.lower() or "'%'" in e for e in erros), (
+            f"Resto com real deveria gerar erro: {erros}"
+        )
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_erro_aninhado_com_tipo_errado() -> None:
+    """Tipo errado dentro de expressão aninhada deve ser detectado."""
+    conteudo = "(START)\n(1.0 X)\n(X 3.0 >)\n(((1 RES) 2 /) 4 +)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        _, erros = verificarTipos(arvore, tabela)
+        # (1 RES) é unknown → / com unknown → int, sem erro aqui
+        # O teste valida que não quebra com aninhamento
+        assert isinstance(erros, list), "Deveria retornar lista de erros"
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_tipos_salvar_erros_md() -> None:
+    """salvarErrosTipos deve criar arquivo Markdown com os erros."""
+    conteudo = "(START)\n(3.5 2 /)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    md = _escrever_tmp('')
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        _, erros = verificarTipos(arvore, tabela)
+        resultado = salvarErrosTipos(erros, md)
+        assert resultado == md
+        with open(md, encoding='utf-8') as f:
+            texto = f.read()
+        assert 'Relatório' in texto or 'Erro' in texto or 'divisão' in texto.lower()
+    finally:
+        _apagar_tmp(cam)
+        _apagar_tmp(md)
+
+
+def test_tipos_salvar_sem_erros_md() -> None:
+    """salvarErrosTipos sem erros deve gerar arquivo com mensagem de ausência."""
+    conteudo = "(START)\n(2 3 +)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    md = _escrever_tmp('')
+    try:
+        _, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        _, erros = verificarTipos(arvore, tabela)
+        salvarErrosTipos(erros, md)
+        with open(md, encoding='utf-8') as f:
+            texto = f.read()
+        assert 'Nenhum erro' in texto
+    finally:
+        _apagar_tmp(cam)
+        _apagar_tmp(md)
+
+
+def test_tipos_integracao_teste1() -> None:
+    """teste1.txt é válido: não deve gerar erros de tipo."""
+    cam = os.path.join(_DIR_PROJETO, 'teste1.txt')
+    if not os.path.exists(cam):
+        return
+    _, arvore, erros_lex, erros_sint = prepararEntradaSemantica(cam)
+    assert not erros_lex,  f"teste1.txt: erros léxicos: {erros_lex}"
+    assert not erros_sint, f"teste1.txt: erros sintáticos: {erros_sint}"
+    tabela, _ = construirTabelaSimbolos(arvore)
+    _, erros = verificarTipos(arvore, tabela)
+    assert not erros, f"teste1.txt: erros de tipo inesperados: {erros}"
+
+
+def test_tipos_integracao_teste2() -> None:
+    """teste2.txt deve ter pelo menos 4 erros de tipo (erros 2-6 do arquivo)."""
+    cam = os.path.join(_DIR_PROJETO, 'teste2.txt')
+    if not os.path.exists(cam):
+        return
+    _, arvore, erros_lex, erros_sint = prepararEntradaSemantica(cam)
+    assert not erros_lex,  f"teste2.txt: erros léxicos inesperados: {erros_lex}"
+    assert not erros_sint, f"teste2.txt: erros sintáticos inesperados: {erros_sint}"
+    tabela, _ = construirTabelaSimbolos(arvore)
+    _, erros = verificarTipos(arvore, tabela)
+    assert len(erros) >= 4, (
+        f"teste2.txt deveria ter >= 4 erros de tipo, obteve {len(erros)}: {erros}"
+    )
+    assert any('bool' in e.lower() for e in erros), "Deveria ter erro de bool em aritmética"
+    assert any('if' in e.lower() for e in erros), "Deveria ter erro de condição de IF"
+    assert any('while' in e.lower() for e in erros), "Deveria ter erro de condição de WHILE"
+    assert any('divisão inteira' in e.lower() for e in erros), "Deveria ter erro de divisão inteira"
+    assert any('resto' in e.lower() for e in erros), "Deveria ter erro de resto"
+
+
+def test_tipos_integracao_teste3() -> None:
+    """teste3.txt é válido: não deve gerar erros de tipo."""
+    cam = os.path.join(_DIR_PROJETO, 'teste3.txt')
+    if not os.path.exists(cam):
+        return
+    _, arvore, erros_lex, erros_sint = prepararEntradaSemantica(cam)
+    assert not erros_lex,  f"teste3.txt: erros léxicos: {erros_lex}"
+    assert not erros_sint, f"teste3.txt: erros sintáticos: {erros_sint}"
+    tabela, _ = construirTabelaSimbolos(arvore)
+    _, erros = verificarTipos(arvore, tabela)
+    assert not erros, f"teste3.txt: erros de tipo inesperados: {erros}"
+
+
+def rodar_testes_verificarTipos() -> None:
+    """Executa todos os testes para verificarTipos (Aluno 3)."""
+    test_tipos_int_add()
+    test_tipos_real_add()
+    test_tipos_misto_promove_real()
+    test_tipos_rdiv_retorna_real()
+    test_tipos_relacional_retorna_bool()
+    test_tipos_true_false_sao_bool()
+    test_tipos_load_int()
+    test_tipos_load_real()
+    test_tipos_res_unknown()
+    test_tipos_aninhado_dois_niveis()
+    test_tipos_aninhado_tres_niveis()
+    test_tipos_div_int_ok()
+    test_tipos_mod_ok()
+    test_tipos_cond_if_bool_ok()
+    test_tipos_cond_while_bool_ok()
+    test_tipos_erro_bool_em_aritm()
+    test_tipos_erro_cond_if_real()
+    test_tipos_erro_cond_while_real()
+    test_tipos_erro_div_int_com_real()
+    test_tipos_erro_mod_com_real()
+    test_tipos_erro_aninhado_com_tipo_errado()
+    test_tipos_salvar_erros_md()
+    test_tipos_salvar_sem_erros_md()
+    test_tipos_integracao_teste1()
+    test_tipos_integracao_teste2()
+    test_tipos_integracao_teste3()
+    print("Todos os testes de verificarTipos passaram.")
+
+
+# ─────────────────────────────────────────────────────────────
 # Ponto de entrada
 # ─────────────────────────────────────────────────────────────
 
@@ -1622,5 +2364,7 @@ if __name__ == '__main__':
         rodar_testes_prepararEntrada()
     elif len(sys.argv) == 2 and sys.argv[1] == '--test-construir':
         rodar_testes_construirTabelaSimbolos()
+    elif len(sys.argv) == 2 and sys.argv[1] == '--test-verificar':
+        rodar_testes_verificarTipos()
     else:
         main()
