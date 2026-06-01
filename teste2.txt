@@ -3,6 +3,10 @@
    Os erros são semânticos (não sintáticos): a estrutura é válida,
    mas os tipos ou declarações estão incorretos. }*
 (START)
+*{ ── operações válidas para cobrir todos os operadores exigidos ── }*
+(10.0 3.0 -)            *{ subtração real: cobre OP_SUB }*
+(6.0 2.0 |)             *{ divisão real: cobre OP_RDIV }*
+(2 4 ^)                 *{ potenciação: cobre OP_POW }*
 *{ ── ERRO SEMÂNTICO 1: variável usada antes da definição ──
    PRECO é usada em expressão sem ter sido definida com (valor PRECO).
    Esperado: erro "variável PRECO não declarada". }*
@@ -11,9 +15,8 @@
 (5.0 PRECO)
 *{ ── ERRO SEMÂNTICO 2: operação aritmética com bool ──
    (PRECO 3.0 >) produz bool; somar bool com real é inválido.
-   Esperado: erro "operação '+' entre bool e real". }*
-(PRECO 3.0 >)
-((1 RES) 2.0 +)
+   Esperado: erro "operação '+' não suportada com tipo bool". }*
+((PRECO 3.0 >) 2.0 +)
 *{ ── ERRO SEMÂNTICO 3: condição de IF não é bool ──
    (PRECO) carrega PRECO que é real, não bool.
    Esperado: erro "condição do IF deve ser bool". }*
@@ -32,7 +35,15 @@
    Esperado: erro "resto requer tipo int". }*
 (9.0 4 %)
 *{ ── operações válidas intercaladas para testar robustez ── }*
-(2.0 3.0 +)             *{ válida }*
+*{ ── expressões aninhadas de complexidade crescente ── }*
+(2.0 3.0 +)             *{ nível 1: cobre OP_ADD }*
+((2.0 3.0 +) 4.0 *)     *{ nível 2: resultado de + usado em * }*
+(((1 2 +) 3 -) 4 *)     *{ nível 3: aninhamento crescente → int }*
+(5 1.5 *)               *{ válida: int × real → real (promoção numérica) }*
 (1 RES)                 *{ resultado do comando anterior }*
-(5 10 *)                *{ válida: int * int }*
+(5 10 *)                *{ válida: int * int, cobre OP_MUL }*
+(10 3 /)                *{ válida: divisão inteira, cobre OP_IDIV }*
+(10 3 %)                *{ válida: resto, cobre OP_MOD }*
+(TRUE)                  *{ literal booleano }*
+(FALSE)                 *{ literal booleano }*
 (END)

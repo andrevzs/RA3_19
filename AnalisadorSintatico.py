@@ -93,26 +93,26 @@ def _producoes_fixas() -> dict[str, list[list[str]]]:
 
         # Continuação após NUM_INT
         'num_int_cont': [
-            ['KW_RES'],                              # (N RES)
-            ['ID', 'after_id_first_arg'],            # (N ID) ou (N ID op)
-            ['NUM_INT', 'arith_op'],                 # (N N op)
-            ['NUM_REAL', 'arith_op'],                # (N V.x op)
-            ['LP', 'stmt_inner', 'RP', 'arith_op'],  # (N (expr) op)
+            ['KW_RES'],                             # (N RES)
+            ['ID', 'after_id_first_arg'],           # (N ID) ou (N ID op)
+            ['NUM_INT', 'any_op'],                  # (N N op) — arith ou relacional
+            ['NUM_REAL', 'any_op'],                 # (N V.x op)
+            ['LP', 'stmt_inner', 'RP', 'any_op'],   # (N (expr) op)
         ],
 
         # Após ID visto como segundo símbolo em (NUM_INT/NUM_REAL ID ...)
-        # ε → STORE (N ID);   arith_op → aritmética (N ID op)
+        # ε → STORE (N ID);   any_op → aritmética ou relacional (N ID op)
         'after_id_first_arg': [
             [EPSILON],
-            ['arith_op'],
+            ['any_op'],
         ],
 
         # Continuação após NUM_REAL
         'num_real_cont': [
-            ['ID', 'after_id_first_arg'],            # (V ID) ou (V ID op)
-            ['NUM_INT', 'arith_op'],
-            ['NUM_REAL', 'arith_op'],
-            ['LP', 'stmt_inner', 'RP', 'arith_op'],
+            ['ID', 'after_id_first_arg'],           # (V ID) ou (V ID op)
+            ['NUM_INT', 'any_op'],                  # (V N op)
+            ['NUM_REAL', 'any_op'],                 # (V V.x op)
+            ['LP', 'stmt_inner', 'RP', 'any_op'],   # (V (expr) op)
         ],
 
         # Continuação após ID como primeiro símbolo

@@ -14,6 +14,7 @@
 (7 2 /)                          *{ divisão inteira }*
 (7 2 %)                          *{ resto inteiro }*
 (2 8 ^)                          *{ potência }*
+(3 1.5 +)                        *{ int + real → real (promoção numérica) }*
 *{ ══════════════════════════════════════════════
    BLOCO 2 — variáveis e comandos especiais
    ══════════════════════════════════════════════ }*
@@ -47,4 +48,6 @@
 (WHILE (ITER 5 <) ((ITER 1 +) ITER))   *{ conta de 0 a 4 }*
 (ITER)                                  *{ verifica valor final }*
 (1 RES)                                 *{ deve ser 5 }*
+(TRUE)                                   *{ literal booleano }*
+(FALSE)                                  *{ literal booleano }*
 (END) *{ fim obrigatório }*

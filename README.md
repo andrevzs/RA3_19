@@ -36,11 +36,11 @@ Programas são escritos em RPN, no formato `(A B op)`, envoltos em `(START)` e `
 | `\|` | Divisão real (double) | `(10.0 3.0 \|)` |
 | `/` | Divisão inteira | `(10 3 /)` |
 | `%` | Resto da divisão | `(10 3 %)` |
-| `^` | Potenciação (exp. inteiro ≥ 0) | `(2.0 8.0 ^)` |
+| `^` | Potenciação (exp. inteiro ≥ 0) | `(2 8 ^)` |
 
 ### Operadores Relacionais
 
-`>`, `<`, `==`, `!=`, `>=`, `<=` — produzem `1.0` (verdadeiro) ou `0.0` (falso).
+`>`, `<`, `==`, `!=`, `>=`, `<=` — produzem o tipo `bool` (resultado de comparação).
 
 ### Comandos Especiais
 
@@ -49,6 +49,18 @@ Programas são escritos em RPN, no formato `(A B op)`, envoltos em `(START)` e `
 | `(N RES)` | Resultado da expressão N linhas atrás |
 | `(V MEM)` | Armazena o valor `V` na memória `MEM` |
 | `(MEM)` | Carrega o valor armazenado em `MEM` (retorna 0.0 se não inicializado) |
+
+### Comentários
+
+Comentários são delimitados por `*{` e `}*` e podem aparecer em qualquer posição:
+
+```
+*{ comentário em linha própria }*
+(3.0 2.0 +)   *{ comentário no final da linha }*
+(10 *{ comentário entre tokens }* 5 +)
+*{ comentário
+   multilinha }*
+```
 
 ### Estruturas de Controle
 
@@ -62,7 +74,7 @@ Programas são escritos em RPN, no formato `(A B op)`, envoltos em `(START)` e `
 Exemplos:
 ```
 (IF (X 0.0 >) (1.0 RESULTADO) (0.0 RESULTADO))
-(IF (CONTADOR 5.0 >=) (CONTADOR MAXIMO))
+(IF (CONTADOR 5 >=) ((CONTADOR 1 +) CONTADOR))
 ```
 
 #### Laço de Repetição (WHILE)
@@ -73,12 +85,50 @@ Exemplos:
 
 Exemplos:
 ```
-(WHILE (I 10.0 <) ((I 1.0 +) I))
+(WHILE (I 10 <) ((I 1 +) I))
 (WHILE (TOTAL LIMITE !=) ((TOTAL PASSO +) TOTAL))
 ```
 
-- `cond` é qualquer expressão RPN; se avaliada como não-zero, o laço continua.
+- `cond` deve avaliar para o tipo `bool` (resultado de operador relacional ou literal `TRUE`/`FALSE`).
 - Aninhamento ilimitado.
+
+---
+
+## Tipos Suportados
+
+A linguagem possui sistema de tipos **estático e forte**: o tipo de cada variável é determinado no momento da primeira definição e não pode ser alterado.
+
+| Tipo | Descrição | Literais |
+|------|-----------|---------|
+| `int` | Inteiro de precisão simples | `0`, `42`, `100` |
+| `real` | Ponto flutuante duplo IEEE 754 | `0.0`, `3.14`, `2.5` |
+| `bool` | Valor lógico produzido por operadores relacionais ou pelos literais `TRUE`/`FALSE` | `TRUE`, `FALSE` |
+| `unknown` | Tipo não determinável estaticamente (propagado sem erro) | resultado de `(N RES)` |
+
+### Regras de Compatibilidade de Tipos
+
+| Operação | Tipos válidos | Tipo resultante |
+|----------|---------------|-----------------|
+| `+` `-` `*` `^` | int × int | int |
+| `+` `-` `*` `^` | int × real ou real × real | real |
+| `\|` | int ou real × int ou real | real |
+| `/` | int × int | int |
+| `%` | int × int | int |
+| `>` `<` `==` `!=` `>=` `<=` | int ou real × int ou real | bool |
+| IF/WHILE condição | — | deve ser `bool` |
+
+Operações com `bool` como operando aritmético ou relacional geram **erro semântico**.
+
+---
+
+## Regras para Definição e Uso de Variáveis
+
+1. **Definição**: usa o padrão `(V MEM)`, onde `V` é um literal numérico ou expressão e `MEM` é um identificador em letras maiúsculas. Exemplo: `(42 CONTADOR)`, `(3.14 PI)`.
+2. **Uso**: usa o padrão `(MEM)` para carregar o valor da variável, ou usa `MEM` como operando em uma expressão: `(CONTADOR 1 +)`.
+3. **Declaração obrigatória antes do uso**: qualquer variável usada sem ter sido previamente definida com `(V MEM)` gera um **erro semântico**.
+4. **Tipo imutável**: uma variável definida como `int` não pode ser redefinida como `real` (e vice-versa). Redefinição com tipo incompatível gera **erro semântico**.
+5. **Identificadores reservados**: `TRUE` e `FALSE` são literais booleanos e não podem ser usados como nomes de variáveis.
+6. **Escopo**: cada arquivo de código-fonte é um escopo independente.
 
 ---
 
@@ -105,14 +155,14 @@ python AnalisadorSemantico.py teste1.txt
 python AnalisadorSintatico.py <arquivo.txt>
 ```
 
-**Saídas geradas:**
+**Saídas geradas pelo compilador (Fase 3):**
 
 | Arquivo | Conteúdo |
 |---------|----------|
-| `arvore.json` | Árvore sintática em formato JSON |
-| `programa.asm` | Código Assembly ARMv7 pronto para Cpulator |
-| `tabela_simbolos.md` | Tabela de símbolos (Fase 3) |
-| `erros_tipos.md` | Relatório de erros semânticos de tipo (Fase 3) |
+| `arvore_atribuida.json` | Árvore sintática atribuída com anotações de tipo e categoria |
+| `programa.asm` | Código Assembly ARMv7 (gerado apenas para programas sem erros) |
+| `tabela_simbolos.md` | Tabela de símbolos com tipos, linhas de definição e uso |
+| `erros_tipos.md` | Relatório de erros semânticos de tipo |
 
 ### Executar os testes unitários
 
@@ -125,6 +175,9 @@ python AnalisadorSemantico.py --test-construir
 
 # Fase 3 — Aluno 3: verificarTipos
 python AnalisadorSemantico.py --test-verificar
+
+# Fase 3 — Aluno 4: gerarArvoreAtribuida e gerarAssembly
+python AnalisadorSemantico.py --test-aluno4
 
 # Fase 2 — gramática LL(1) (FIRST, FOLLOW, tabela)
 python AnalisadorSintatico.py --test-gramatica
@@ -151,38 +204,165 @@ python AnalisadorSintatico.py --test-lerTokens
 Para testar tratamento de erros:
 ```bash
 # Erro léxico: caractere inválido '@'
-python AnalisadorSintatico.py teste_erros.txt
+python AnalisadorSemantico.py teste_erros.txt
 
 # Erro sintático: token inesperado após operador
-python AnalisadorSintatico.py teste_erro_sintatico.txt
+python AnalisadorSemantico.py teste_erro_sintatico.txt
+
+# Erros semânticos: variável não declarada, tipos incompatíveis etc.
+python AnalisadorSemantico.py teste2.txt
 ```
+
+### Exemplos de Programas Semanticamente Válidos
+
+```
+(START)
+*{ define e usa variáveis de tipos diferentes }*
+(42 CONTADOR)           *{ int }*
+(3.14 PI)               *{ real }*
+(CONTADOR 1 +)          *{ int + int = int }*
+(PI 2.0 *)              *{ real * real = real }*
+(CONTADOR 10 <)         *{ int < int = bool }*
+(IF (CONTADOR 10 <) ((CONTADOR 1 +) CONTADOR))
+(WHILE (CONTADOR 5 <) ((CONTADOR 1 +) CONTADOR))
+(END)
+```
+
+```
+(START)
+*{ expressões aninhadas }*
+((3.0 4.0 *) (2.0 1.0 +) +)   *{ real }*
+(((1 2 +) 3 -) 4 *)            *{ int }*
+(2 4 ^)                         *{ potenciação: int }*
+(10.0 3.0 |)                    *{ divisão real: real }*
+(1 RES)                         *{ unknown }*
+(END)
+```
+
+### Exemplos de Programas Semanticamente Inválidos
+
+```
+(START)
+(X 1 +)        *{ ERRO: X usada antes de ser definida }*
+(42 X)
+(END)
+```
+
+```
+(START)
+(42 X)
+(3.14 X)       *{ ERRO: X redefinida com tipo incompatível (int → real) }*
+(END)
+```
+
+```
+(START)
+(1.0 A)
+(IF (A) (2.0 3.0 +))   *{ ERRO: condição do IF deve ser bool, não real }*
+(END)
+```
+
+```
+(START)
+(3.5 2 /)      *{ ERRO: divisão inteira '/' requer tipo int (obteve real e int) }*
+(END)
+```
+
+---
+
+## Explicação da Tabela de Símbolos
+
+A tabela de símbolos é produzida pela função `construirTabelaSimbolos()` durante a análise semântica. Ela é salva em `tabela_simbolos.md` a cada execução.
+
+**Campos registrados para cada variável:**
+
+| Campo | Descrição |
+|-------|-----------|
+| Variável | Nome do identificador (letras maiúsculas) |
+| Tipo | Tipo inferido: `int`, `real` ou `unknown` |
+| Escopo | Escopo de visibilidade da variável (sempre `global` — cada arquivo é um escopo independente) |
+| Linha de Definição | Linha do arquivo fonte onde a variável foi definida com `(V MEM)` |
+| Linhas de Uso | Lista de todas as linhas onde a variável foi usada como operando |
+
+**Funcionamento:**
+- Ao encontrar `(V MEM)`, registra `MEM` com o tipo de `V` e a linha corrente.
+- Ao encontrar `MEM` como operando, registra a linha corrente na lista de usos.
+- Se `MEM` é usado antes de ser definido → **erro semântico** com número de linha.
+- Se `MEM` é redefinido com tipo incompatível → **erro semântico** com tipos conflitantes.
+
+**Exemplo de tabela gerada (`tabela_simbolos.md`):**
+
+| Variável | Tipo | Escopo | Linha de Definição | Linhas de Uso |
+|---|---|---|---|---|
+| CONT | real | global | 15 | 16, 17 |
+| SALDO | real | global | 10 | 11, 20, 21, 22 |
+
+---
+
+## Explicação da Árvore Sintática Atribuída
+
+A árvore sintática atribuída é produzida pela função `gerarArvoreAtribuida()` e salva em `arvore_atribuida.json` a cada execução bem-sucedida.
+
+**Diferença em relação à árvore da Fase 2:**
+
+A árvore atribuída estende a árvore sintática original com o campo `anotacoes` em cada nó:
+
+```json
+{
+  "tipo": "NT",
+  "simbolo": "stmt_inner",
+  "linha": 6,
+  "filhos": [...],
+  "anotacoes": {
+    "tipo_semantico": "real",
+    "categoria": "expressao"
+  }
+}
+```
+
+**Campos de `anotacoes`:**
+
+| Campo | Presente em | Descrição |
+|-------|-------------|-----------|
+| `tipo_semantico` | Todos os nós | Tipo inferido pelo analisador semântico (`int`, `real`, `bool`, `unknown`, ou `null` para comandos sem valor de retorno como IF/WHILE/STORE) |
+| `categoria` | Nós NT | Papel semântico do nó: `inicio`, `fim`, `condicional`, `repeticao`, `expressao`, ou o `simbolo` do NT |
+
+**Categorias dos nós `stmt_inner`:**
+
+| Categoria | Quando ocorre |
+|-----------|--------------|
+| `inicio` | `(START)` |
+| `fim` | `(END)` |
+| `condicional` | `(IF ...)` |
+| `repeticao` | `(WHILE ...)` |
+| `expressao` | qualquer expressão aritmética, relacional, LOAD, STORE ou RES |
 
 ---
 
 ## Documentação Técnica
 
-- [`GRAMATICA.md`](GRAMATICA.md) — Gramática LL(1) completa: produções, conjuntos FIRST e FOLLOW, tabela de análise, e árvore sintática de exemplo.
+- [`GRAMATICA.md`](GRAMATICA.md) — Gramática atribuída LL(1) completa: produções com ações semânticas, conjuntos FIRST e FOLLOW, tabela de análise e árvore sintática de exemplo.
 - [`REGRAS_TIPOS.md`](REGRAS_TIPOS.md) — Sistema de regras de validação de tipos em cálculo de sequentes (Aluno 3).
-- [`arvore.json`](arvore.json) — Árvore sintática da última execução.
-- [`programa.asm`](programa.asm) — Assembly gerado pela última execução.
-- `tabela_simbolos.md` — Tabela de símbolos gerada por `salvarTabelaSimbolos()` (gerado na execução).
-- `erros_tipos.md` — Relatório de erros de tipo gerado por `salvarErrosTipos()` (gerado na execução).
+- [`arvore_atribuida.json`](arvore_atribuida.json) — Árvore sintática atribuída da última execução (gerada com `teste1.txt`).
+- [`programa.asm`](programa.asm) — Assembly ARMv7 gerado pela última execução (gerado com `teste1.txt`).
+- [`tabela_simbolos.md`](tabela_simbolos.md) — Tabela de símbolos da última execução.
+- [`erros_tipos.md`](erros_tipos.md) — Relatório de erros de tipo da última execução.
 
 ---
 
-## Arquitetura do Código (`AnalisadorSintatico.py`)
+## Arquitetura do Código (`AnalisadorSemantico.py`)
 
-| Função / Classe | Responsável | Descrição |
+| Função | Aluno | Descrição |
 |---|---|---|
-| `lerTokens(arquivo)` | Aluno 3 | Analisador léxico (AFD), retorna vetor de tokens |
-| `construirGramatica()` | Aluno 1 | Calcula FIRST/FOLLOW e constrói tabela LL(1) |
-| `calcularFirst()` | Aluno 1 | Conjuntos FIRST iterativos |
-| `calcularFollow()` | Aluno 1 | Conjuntos FOLLOW iterativos |
-| `construirTabelaLL1()` | Aluno 1 | Tabela de análise LL(1) sem conflitos |
-| `parsear(tokens, gramatica)` | Aluno 2 | Parser LL(1) descendente recursivo |
-| `gerarArvore(derivacao)` | Aluno 4 | Converte derivação em árvore sintática |
-| `gerarAssembly(arvore)` | Aluno 4 | Gera Assembly ARMv7 VFP a partir da árvore |
-| `main()` | Aluno 4 | Interface de linha de comando e integração |
+| `lerTokensFase3(arquivo)` | Aluno 1 | Léxico com suporte a comentários `*{…}*` |
+| `prepararEntradaSemantica(arquivo)` | Aluno 1 | Integra léxico + parser da Fase 2; valida START/END |
+| `construirTabelaSimbolos(arvore)` | Aluno 2 | Constrói tabela de símbolos; detecta declarações/usos inválidos |
+| `salvarTabelaSimbolos(tabela, erros)` | Aluno 2 | Salva tabela em `tabela_simbolos.md` |
+| `verificarTipos(arvore, tabela)` | Aluno 3 | Verifica compatibilidade de tipos; infere tipos dos nós |
+| `salvarErrosTipos(erros)` | Aluno 3 | Salva relatório de erros em `erros_tipos.md` |
+| `gerarArvoreAtribuida(arvore, tabela, tipos)` | Aluno 4 | Produz árvore com anotações semânticas |
+| `gerarAssembly(arvoreAtribuida)` | Aluno 4 | Gera código Assembly ARMv7 a partir da árvore atribuída |
+| `main()` | Aluno 4 | Interface de linha de comando e coordenação do pipeline completo |
 
 ---
 
@@ -204,13 +384,18 @@ O código Assembly gerado usa instruções **ARMv7 VFP** (ponto flutuante IEEE 7
 Para depurar, execute com um arquivo de teste simples:
 
 ```bash
-python AnalisadorSintatico.py teste1.txt
+python AnalisadorSemantico.py teste1.txt
 ```
 
 O programa imprime no terminal:
-1. A árvore sintática em formato visual
-2. O código Assembly gerado
+1. Arquivo analisado
+2. Resultado da análise léxica (número de tokens)
+3. Resultado da análise sintática
+4. Resultado da análise semântica (tabela de símbolos e verificação de tipos)
+5. Lista de erros encontrados (se houver)
+6. Caminhos dos arquivos de saída gerados
 
 Mensagens de erro incluem o número de linha e descrição:
-- **Erro léxico** (`ValueError`): caractere inválido, número malformado, operador incompleto
-- **Erro sintático** (`SyntaxError`): token inesperado com lista de tokens esperados
+- **Erro léxico** (`ValueError`): caractere inválido, comentário não fechado
+- **Erro sintático**: token inesperado com indicação de linha
+- **Erro semântico**: variável não declarada, tipo incompatível, condição inválida, divisão/resto com não-inteiros

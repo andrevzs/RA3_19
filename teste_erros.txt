@@ -1,14 +1,27 @@
+*{ Arquivo de teste: erros léxicos — contém caractere inválido '@' na linha 22 }*
 (START)
-(3.0 2.0 +)
-(9.0 3.0 -)
-(6.0 2.0 *)
-(15.0 4.0 |)
-(15.0 4.0 /)
-(15.0 4.0 %)
-(2.0 4.0 ^)
-(10.0 BASE)
-(BASE)
-(2 RES)
+*{ ── operadores aritméticos ── }*
+(3.0 2.0 +)           *{ soma real }*
+(9.0 3.0 -)           *{ subtração real }*
+(6.0 2.0 *)           *{ multiplicação real }*
+(15.0 4.0 |)          *{ divisão real }*
+(15 4 /)              *{ divisão inteira }*
+(15 4 %)              *{ resto }*
+(2 4 ^)               *{ potenciação }*
+*{ ── variáveis e comandos especiais ── }*
+(10.0 BASE)           *{ define BASE como real }*
+(BASE)                *{ carrega BASE }*
+(2 RES)               *{ resultado de 2 comandos atrás }*
+*{ ── decisão ── }*
 (IF (BASE 5.0 >) (1.0 FLAG) (0.0 FLAG))
+*{ ── repetição ── }*
+(0 CONT)
+(WHILE (CONT 3 <) ((CONT 1 +) CONT))
+*{ ── tipos booleanos e expressões aninhadas ── }*
+(TRUE)
+(FALSE)
+(5 2.5 *)               *{ int × real → real (promoção numérica) }*
+((3.0 2.0 +) 4.0 *)
+*{ ERRO LÉXICO: '@' é caractere inválido }*
 (3.0 2.0 @ 1.0 +)
 (END)

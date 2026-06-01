@@ -11,16 +11,20 @@
 (17 5 /)                *{ divisão inteira }*
 (17 5 %)                *{ resto da divisão }*
 (2 10 ^)                *{ potenciação }*
+(5 2.5 *)               *{ int × real = real (promoção numérica) }*
 *{ ── variáveis: definição e uso ── }*
 (42.0 SALDO)            *{ define SALDO como real }*
 (SALDO)                 *{ carrega SALDO }*
 (3 RES)                 *{ resultado de 3 comandos atrás }*
-*{ ── expressões aninhadas ── }*
+*{ ── expressões aninhadas de complexidade crescente ── }*
 ((3.0 4.0 *) (2.0 1.0 +) +)
 ((SALDO 10.0 -) 2.0 *)
+(((3.0 4.0 *) 2.0 +) 5.0 -)    *{ 3 níveis de aninhamento }*
 *{ ── operadores relacionais (produzem bool) ── }*
 (SALDO 50.0 >)          *{ SALDO > 50? }*
 (SALDO 100.0 <=)        *{ SALDO <= 100? }*
+(3.0 5.0 >)             *{ relacional entre dois literais reais → bool }*
+(3.0 SALDO >)           *{ relacional: literal como primeiro operando }*
 *{ ── decisão ── }*
 (IF (SALDO 0.0 >) (1.0 POSITIVO) (0.0 POSITIVO))
 *{ ── repetição: acumula enquanto CONT < 5 ── }*
