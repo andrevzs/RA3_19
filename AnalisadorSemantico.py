@@ -7,6 +7,7 @@
 import sys
 import os
 import tempfile
+import json
 
 from AnalisadorSintatico import (
     EPSILON,
@@ -15,6 +16,7 @@ from AnalisadorSintatico import (
     construirGramatica,
     parsear,
     gerarArvore,
+    gerarAssembly as _gerarAssemblyFase2,
     _emit,
     _estado_numero,
     _estado_op_maior,
@@ -565,6 +567,7 @@ def _registrar_definicao(tabela: dict, nome: str, tipo: str, linha: int, erros: 
     else:
         tabela[nome] = {
             'tipo': tipo,
+            'escopo': 'global',
             'linha_def': linha,
             'linhas_uso': [],
         }
@@ -604,9 +607,9 @@ def _processar_stmt_recursivo(no_stmt: dict, tabela: dict, erros: list[str], num
     # RES pattern: (N RES)
     n_res = _buscar_res_pattern(stmt_inner)
     if n_res is not None:
-        if n_res > num_stmt[0] - 1:
+        if n_res < 1 or n_res > num_stmt[0] - 1:
             erros.append(
-                f"Linha {stmt_inner['linha']}: (RES) fora do alcance — apenas {num_stmt[0] - 1} stmt(s) anterior(es) disponível(is)"
+                f"Linha {stmt_inner['linha']}: (RES) fora do alcance — N deve ser entre 1 e {num_stmt[0] - 1} (obteve {n_res})"
             )
         return
 
@@ -657,26 +660,31 @@ def salvarTabelaSimbolos(
     tabela: dict,
     erros: list[str],
     caminho: str = 'tabela_simbolos.md',
+    arquivo_fonte: str = '',
 ) -> str:
     """
     (Aluno 2) Salva a tabela de símbolos e os erros semânticos em arquivo Markdown.
 
     Entrada:
-        tabela  — tabela produzida por construirTabelaSimbolos()
-        erros   — lista de erros semânticos de declaração/uso
-        caminho — caminho do arquivo de saída (padrão: tabela_simbolos.md)
+        tabela        — tabela produzida por construirTabelaSimbolos()
+        erros         — lista de erros semânticos de declaração/uso
+        caminho       — caminho do arquivo de saída (padrão: tabela_simbolos.md)
+        arquivo_fonte — nome do arquivo de teste analisado (para rastreabilidade)
 
     Saída:
         caminho do arquivo gerado
     """
     linhas: list[str] = []
     linhas.append('# Tabela de Símbolos\n')
-    linhas.append('| Variável | Tipo | Linha de Definição | Linhas de Uso |')
-    linhas.append('|---|---|---|---|')
+    if arquivo_fonte:
+        linhas.append(f'**Arquivo de teste analisado:** `{arquivo_fonte}`\n')
+    linhas.append('| Variável | Tipo | Escopo | Linha de Definição | Linhas de Uso |')
+    linhas.append('|---|---|---|---|---|')
     for nome, entrada in sorted(tabela.items()):
         usos_str = ', '.join(str(l) for l in entrada.get('linhas_uso', []))
+        escopo = entrada.get('escopo', 'global')
         linhas.append(
-            f"| {nome} | {entrada['tipo']} | {entrada['linha_def']} | {usos_str} |"
+            f"| {nome} | {entrada['tipo']} | {escopo} | {entrada['linha_def']} | {usos_str} |"
         )
     linhas.append('')
     linhas.append('## Erros Semânticos')
@@ -951,7 +959,13 @@ def _inferir_via_cont(
     if simbolo_op in ('after_id_first_arg', 'after_id_nested'):
         after_filhos = op_part.get('filhos', [])
         if not after_filhos:
-            # after_id → ε → padrão STORE; sem tipo de resultado
+            # after_id → ε → padrão STORE; refina tipo na tabela se era unknown
+            nome_var = segundo.get('valor', '')
+            if (t1 is not None and t1 != 'unknown'
+                    and not _é_literal_reservado(nome_var)
+                    and nome_var in tabela
+                    and tabela[nome_var]['tipo'] == 'unknown'):
+                tabela[nome_var]['tipo'] = t1
             return t1
         op_no = after_filhos[0]  # NT arith_op ou any_op
     else:
@@ -1009,18 +1023,25 @@ def verificarTipos(arvore: dict, tabela: dict) -> tuple[dict, list[str]]:
     return tipos, erros
 
 
-def salvarErrosTipos(erros: list[str], caminho: str = 'erros_tipos.md') -> str:
+def salvarErrosTipos(
+    erros: list[str],
+    caminho: str = 'erros_tipos.md',
+    arquivo_fonte: str = '',
+) -> str:
     """
     (Aluno 3) Salva o relatório de erros semânticos de tipo em arquivo Markdown.
 
     Entrada:
-        erros   — lista de erros produzida por verificarTipos()
-        caminho — caminho do arquivo de saída (padrão: erros_tipos.md)
+        erros         — lista de erros produzida por verificarTipos()
+        caminho       — caminho do arquivo de saída (padrão: erros_tipos.md)
+        arquivo_fonte — nome do arquivo de teste analisado (para rastreabilidade)
 
     Saída:
         caminho do arquivo gerado
     """
     linhas: list[str] = ['# Relatório de Erros de Tipo\n']
+    if arquivo_fonte:
+        linhas.append(f'**Arquivo de teste analisado:** `{arquivo_fonte}`\n')
     if erros:
         for erro in erros:
             linhas.append(f'- {erro}')
@@ -1034,52 +1055,240 @@ def salvarErrosTipos(erros: list[str], caminho: str = 'erros_tipos.md') -> str:
 
 
 # ─────────────────────────────────────────────────────────────
-# [Aluno 4] gerarArvoreAtribuida e gerarAssemblySemantico — stubs
+# [Aluno 4] gerarArvoreAtribuida e gerarAssemblySemantico
 # ─────────────────────────────────────────────────────────────
+
+
+def _categoria_stmt_inner(no: dict) -> str:
+    """
+    Determina a categoria semântica de um nó stmt_inner a partir do
+    primeiro token filho.
+    """
+    filhos = no.get('filhos', [])
+    if not filhos:
+        return 'expressao'
+    primeiro = filhos[0]
+    if primeiro.get('tipo') != 'TOKEN':
+        return 'expressao'
+    mapa = {
+        'KW_START':  'inicio',
+        'KW_END':    'fim',
+        'KW_IF':     'condicional',
+        'KW_WHILE':  'repeticao',
+    }
+    return mapa.get(primeiro.get('tipo_token', ''), 'expressao')
+
 
 def gerarArvoreAtribuida(arvore: dict, tabela: dict, tipos: dict) -> dict:
     """
     (Aluno 4) Produz a árvore sintática aumentada com anotações semânticas.
 
+    Percorre a árvore recursivamente e adiciona o campo 'anotacoes' a cada
+    nó. As anotações incluem:
+        'tipo_semantico' — tipo inferido por verificarTipos() para o nó
+                           ('int', 'real', 'bool', 'unknown', ou None)
+        'categoria'      — papel semântico do nó (apenas para NT):
+                           'inicio', 'fim', 'condicional', 'repeticao',
+                           'expressao', ou o próprio 'simbolo' do NT
+
+    A função preserva a estrutura original da árvore para que
+    gerarAssemblySemantico possa reutilizar o gerador de código da Fase 2
+    sem modificações.
+
     Entrada:
-        arvore — árvore sintática inicial
-        tabela — tabela de símbolos
-        tipos  — tipos inferidos por verificarTipos()
+        arvore — árvore sintática inicial produzida por prepararEntradaSemantica()
+        tabela — tabela de símbolos produzida por construirTabelaSimbolos()
+        tipos  — dict[id(nó) → tipo_str] produzido por verificarTipos()
 
     Saída:
-        dict com a árvore anotada com tipo, categoria semântica e dados
-        necessários para a geração de Assembly
+        dict com a mesma estrutura da árvore original, acrescido de
+        'anotacoes' em cada nó.
     """
-    raise NotImplementedError("gerarArvoreAtribuida será implementado pelo Aluno 4")
+    def _anotar(no: dict) -> dict:
+        # Lê o id ANTES de criar qualquer cópia para preservar a referência
+        # usada como chave no dicionário tipos.
+        tipo_sem = tipos.get(id(no))
+
+        if no['tipo'] == 'NT':
+            simbolo = no['simbolo']
+            categoria = (
+                _categoria_stmt_inner(no)
+                if simbolo == 'stmt_inner'
+                else simbolo
+            )
+            return {
+                'tipo': 'NT',
+                'simbolo': simbolo,
+                'filhos': [_anotar(f) for f in no.get('filhos', [])],
+                'linha': no['linha'],
+                'anotacoes': {
+                    'tipo_semantico': tipo_sem,
+                    'categoria': categoria,
+                },
+            }
+
+        # Nó TOKEN
+        return {
+            'tipo': 'TOKEN',
+            'tipo_token': no['tipo_token'],
+            'valor': no['valor'],
+            'linha': no['linha'],
+            'anotacoes': {
+                'tipo_semantico': tipo_sem,
+            },
+        }
+
+    return _anotar(arvore)
+
+
+def _arvore_atribuida_para_json(arvore: dict) -> str:
+    """Serializa a árvore atribuída em JSON legível."""
+    return json.dumps(arvore, indent=2, ensure_ascii=False)
 
 
 def gerarAssemblySemantico(arvoreAtribuida: dict) -> str:
     """
     (Aluno 4) Gera código Assembly ARMv7 a partir da árvore sintática atribuída.
 
-    Só deve ser chamada após validação semântica completa (sem erros).
+    Delega para o gerador de código da Fase 2 (AnalisadorSintatico.gerarAssembly),
+    que percorre a árvore pelos campos 'tipo', 'simbolo', 'filhos', 'tipo_token'
+    e 'valor' — todos preservados pela árvore atribuída. O campo 'anotacoes'
+    adicional é simplesmente ignorado pelo gerador.
+
+    Deve ser chamada apenas após validação semântica completa (sem erros).
 
     Entrada:
         arvoreAtribuida — árvore produzida por gerarArvoreAtribuida()
 
     Saída:
-        string com código Assembly para Cpulator-ARMv7 DEC1-SOC(v16.1)
+        string com código Assembly completo para Cpulator-ARMv7 DEC1-SOC(v16.1)
     """
-    raise NotImplementedError("gerarAssemblySemantico será implementado pelo Aluno 4")
+    return _gerarAssemblyFase2(arvoreAtribuida)
+
+
+# Alias público conforme nomenclatura da Seção 7.4 do enunciado (Fase 3).
+gerarAssembly = gerarAssemblySemantico
 
 
 # ─────────────────────────────────────────────────────────────
-# [Aluno 4] main() — stub de integração
+# [Aluno 4] main() — pipeline completo
 # ─────────────────────────────────────────────────────────────
 
 def main() -> None:
     """
     (Aluno 4) Ponto de entrada do AnalisadorSemantico.
 
-    Coordena: léxico → sintático → semântico → árvore atribuída → Assembly.
-    Execução via linha de comando: python AnalisadorSemantico.py <arquivo.txt>
+    Coordena as cinco etapas do compilador em sequência:
+        1. prepararEntradaSemantica  — léxico + sintático (Aluno 1)
+        2. construirTabelaSimbolos   — declarações e usos (Aluno 2)
+        3. verificarTipos            — compatibilidade de tipos (Aluno 3)
+        4. gerarArvoreAtribuida      — árvore com anotações semânticas
+        5. gerarAssemblySemantico    — código Assembly ARMv7
+
+    A geração de Assembly ocorre apenas quando não há erros léxicos,
+    sintáticos ou semânticos.
+
+    Uso:
+        python AnalisadorSemantico.py <arquivo.txt>
+
+    Artefatos salvos:
+        tabela_simbolos.md   — tabela de símbolos e erros de declaração
+        erros_tipos.md       — relatório de erros de tipo
+        arvore_atribuida.json — árvore sintática aumentada
+        programa.asm         — código Assembly (somente se sem erros)
     """
-    raise NotImplementedError("main() será implementado pelo Aluno 4")
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except AttributeError:
+        pass
+
+    if len(sys.argv) != 2:
+        print("Uso: python AnalisadorSemantico.py <arquivo.txt>")
+        sys.exit(1)
+
+    arquivo = sys.argv[1]
+    print(f"Arquivo analisado: {arquivo}", flush=True)
+    print("=" * 60, flush=True)
+
+    # ── Etapa 1: léxico + sintático ──────────────────────────────
+    tokens, arvore, erros_lex, erros_sint = prepararEntradaSemantica(arquivo)
+
+    if erros_lex:
+        print(f"\n[ERROS LÉXICOS] {len(erros_lex)} erro(s):", file=sys.stderr)
+        for e in erros_lex:
+            print(f"  {e}", file=sys.stderr)
+    else:
+        print(f"[OK] Análise léxica — {len(tokens) - 1} token(s) gerado(s)", flush=True)
+
+    if erros_sint:
+        print(f"\n[ERROS SINTÁTICOS] {len(erros_sint)} erro(s):", file=sys.stderr)
+        for e in erros_sint:
+            print(f"  {e}", file=sys.stderr)
+    else:
+        print("[OK] Análise sintática concluída", flush=True)
+
+    if erros_lex or erros_sint:
+        total = len(erros_lex) + len(erros_sint)
+        print(
+            f"\n[ERRO] Compilação interrompida: {total} erro(s) léxico(s)/sintático(s).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # ── Etapa 2: tabela de símbolos ──────────────────────────────
+    tabela, erros_tab = construirTabelaSimbolos(arvore)
+    caminho_tab = salvarTabelaSimbolos(tabela, erros_tab, arquivo_fonte=arquivo)
+    print(f"[OK] Tabela de símbolos salva em '{caminho_tab}' "
+          f"({len(tabela)} variável(is))", flush=True)
+
+    if erros_tab:
+        print(f"\n[ERROS DE DECLARAÇÃO] {len(erros_tab)} erro(s):", file=sys.stderr)
+        for e in erros_tab:
+            print(f"  {e}", file=sys.stderr)
+
+    # ── Etapa 3: verificação de tipos ────────────────────────────
+    tipos, erros_tipos = verificarTipos(arvore, tabela)
+    caminho_erros = salvarErrosTipos(erros_tipos, arquivo_fonte=arquivo)
+    print(f"[OK] Relatório de erros de tipo salvo em '{caminho_erros}'", flush=True)
+
+    if erros_tipos:
+        print(f"\n[ERROS DE TIPO] {len(erros_tipos)} erro(s):", file=sys.stderr)
+        for e in erros_tipos:
+            print(f"  {e}", file=sys.stderr)
+
+    total_sem = len(erros_tab) + len(erros_tipos)
+    if total_sem > 0:
+        print(
+            f"\n[ERRO] Compilação interrompida: {total_sem} erro(s) semântico(s). "
+            "Assembly não gerado.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # ── Etapa 4: árvore atribuída ────────────────────────────────
+    arvore_atribuida = gerarArvoreAtribuida(arvore, tabela, tipos)
+    # Envolve a árvore em objeto com metadado do arquivo fonte (Seção 10.4)
+    saida_json = {
+        'arquivo_fonte': arquivo,
+        'arvore_atribuida': arvore_atribuida,
+    }
+    json_str = json.dumps(saida_json, indent=2, ensure_ascii=False)
+    with open('arvore_atribuida.json', 'w', encoding='utf-8') as f:
+        f.write(json_str)
+    print("[OK] Árvore sintática atribuída salva em 'arvore_atribuida.json'")
+
+    # ── Etapa 5: geração de Assembly ─────────────────────────────
+    assembly = gerarAssemblySemantico(arvore_atribuida)
+    cabecalho_asm = f"@ Arquivo fonte: {arquivo}\n@ Gerado por: AnalisadorSemantico.py\n"
+    with open('programa.asm', 'w', encoding='utf-8') as f:
+        f.write(cabecalho_asm + assembly)
+    print("[OK] Código Assembly salvo em 'programa.asm'")
+
+    print("\n" + "=" * 60)
+    print("[OK] Compilação concluída com sucesso!")
+    print(f"[OK] Arquivo de teste utilizado: {arquivo}")
+    print("=" * 60)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -1404,6 +1613,39 @@ def test_preparar_arquivo_inexistente() -> None:
         assert False, "deveria ter levantado FileNotFoundError"
     except FileNotFoundError:
         pass
+
+
+def test_preparar_sintaxe_invalida_operador_prematuro() -> None:
+    """Operador onde o segundo operando é esperado deve gerar erro sintático.
+    (3.0 + 2.0) coloca OP_ADD antes do segundo operando: o parser espera
+    um token em FIRST(num_real_cont) = {ID, NUM_INT, NUM_REAL, LP}.
+    """
+    conteudo = "(START)\n(3.0 + 2.0)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, _, erros_lex, erros_sint = prepararEntradaSemantica(cam)
+        assert not erros_lex, f"Não deveria haver erros léxicos: {erros_lex}"
+        assert len(erros_sint) >= 1, (
+            f"Operador antes do segundo operando deveria gerar erro sintático: {erros_sint}"
+        )
+    finally:
+        _apagar_tmp(cam)
+
+
+def test_preparar_sintaxe_invalida_operador_extra() -> None:
+    """Operador extra após expressão completa deve gerar erro sintático.
+    Em (3.0 2.0 + +) o segundo '+' surge onde o parser espera RP.
+    """
+    conteudo = "(START)\n(3.0 2.0 + +)\n(END)\n"
+    cam = _escrever_tmp(conteudo)
+    try:
+        _, _, erros_lex, erros_sint = prepararEntradaSemantica(cam)
+        assert not erros_lex, f"Não deveria haver erros léxicos: {erros_lex}"
+        assert len(erros_sint) >= 1, (
+            f"Operador extra deveria gerar erro sintático: {erros_sint}"
+        )
+    finally:
+        _apagar_tmp(cam)
 
 
 def test_integracao_fase3_lexer() -> None:
@@ -1925,6 +2167,8 @@ def rodar_testes_prepararEntrada() -> None:
     test_preparar_comentarios_invisiveis_ao_parser()
     test_preparar_tokens_sem_texto_de_comentario()
     test_preparar_arquivo_inexistente()
+    test_preparar_sintaxe_invalida_operador_prematuro()
+    test_preparar_sintaxe_invalida_operador_extra()
     test_integracao_fase3_lexer()
     test_integracao_fase3_lexer_tem_todos_ops()
     test_integracao_fase3_parser()
@@ -2356,6 +2600,336 @@ def rodar_testes_verificarTipos() -> None:
 
 
 # ─────────────────────────────────────────────────────────────
+# [Aluno 4] Funções de teste — gerarArvoreAtribuida e gerarAssemblySemantico
+# ─────────────────────────────────────────────────────────────
+
+def _programa_simples_arvore() -> tuple[dict, dict, dict]:
+    """
+    Helper: constrói arvore, tabela e tipos para o programa:
+        (START) (3.0 2.0 +) (END)
+    """
+    cam = _escrever_tmp("(START)\n(3.0 2.0 +)\n(END)\n")
+    try:
+        tokens, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, _ = verificarTipos(arvore, tabela)
+    finally:
+        _apagar_tmp(cam)
+    return arvore, tabela, tipos
+
+
+def test_gerarArvoreAtribuida_preserva_estrutura() -> None:
+    """A árvore atribuída deve ter a mesma estrutura que a original."""
+    arvore, tabela, tipos = _programa_simples_arvore()
+    atribuida = gerarArvoreAtribuida(arvore, tabela, tipos)
+    assert atribuida['tipo'] == 'NT', "Raiz deve ser NT"
+    assert atribuida['simbolo'] == 'programa', "Raiz deve ser 'programa'"
+    assert 'filhos' in atribuida, "Raiz deve ter 'filhos'"
+
+
+def test_gerarArvoreAtribuida_tem_anotacoes() -> None:
+    """Todo nó da árvore atribuída deve ter o campo 'anotacoes'."""
+    arvore, tabela, tipos = _programa_simples_arvore()
+    atribuida = gerarArvoreAtribuida(arvore, tabela, tipos)
+
+    def _verificar(no: dict) -> None:
+        assert 'anotacoes' in no, (
+            f"Nó sem 'anotacoes': {no.get('tipo')} {no.get('simbolo', no.get('tipo_token'))}"
+        )
+        for f in no.get('filhos', []):
+            _verificar(f)
+
+    _verificar(atribuida)
+
+
+def test_gerarArvoreAtribuida_anotacoes_nt_tem_categoria() -> None:
+    """Nós NT devem ter 'categoria' em 'anotacoes'."""
+    arvore, tabela, tipos = _programa_simples_arvore()
+    atribuida = gerarArvoreAtribuida(arvore, tabela, tipos)
+
+    def _checar(no: dict) -> None:
+        if no['tipo'] == 'NT':
+            assert 'categoria' in no['anotacoes'], (
+                f"NT '{no['simbolo']}' sem 'categoria'"
+            )
+        for f in no.get('filhos', []):
+            _checar(f)
+
+    _checar(atribuida)
+
+
+def test_gerarArvoreAtribuida_categoria_inicio_fim() -> None:
+    """stmt_inner START/END devem ter categoria 'inicio'/'fim'."""
+    arvore, tabela, tipos = _programa_simples_arvore()
+    atribuida = gerarArvoreAtribuida(arvore, tabela, tipos)
+
+    categorias: list[str] = []
+
+    def _coletar(no: dict) -> None:
+        if no['tipo'] == 'NT' and no['simbolo'] == 'stmt_inner':
+            categorias.append(no['anotacoes'].get('categoria', ''))
+        for f in no.get('filhos', []):
+            _coletar(f)
+
+    _coletar(atribuida)
+    assert 'inicio' in categorias, f"Categoria 'inicio' não encontrada: {categorias}"
+    assert 'fim' in categorias, f"Categoria 'fim' não encontrada: {categorias}"
+
+
+def test_gerarArvoreAtribuida_tipo_semantico_real() -> None:
+    """Nó da expressão (3.0 2.0 +) deve ter tipo_semantico 'real'."""
+    arvore, tabela, tipos = _programa_simples_arvore()
+    atribuida = gerarArvoreAtribuida(arvore, tabela, tipos)
+
+    tipos_encontrados: list[str] = []
+
+    def _coletar_tipos(no: dict) -> None:
+        t = no.get('anotacoes', {}).get('tipo_semantico')
+        if t is not None:
+            tipos_encontrados.append(t)
+        for f in no.get('filhos', []):
+            _coletar_tipos(f)
+
+    _coletar_tipos(atribuida)
+    assert 'real' in tipos_encontrados, (
+        f"Tipo 'real' não encontrado nas anotações: {set(tipos_encontrados)}"
+    )
+
+
+def test_gerarArvoreAtribuida_categoria_condicional() -> None:
+    """stmt_inner IF deve ter categoria 'condicional'."""
+    cam = _escrever_tmp(
+        "(START)\n"
+        "(5.0 X)\n"
+        "(IF (X 0.0 >) (1.0 R) (0.0 R))\n"
+        "(END)\n"
+    )
+    try:
+        tokens, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, _ = verificarTipos(arvore, tabela)
+        atribuida = gerarArvoreAtribuida(arvore, tabela, tipos)
+    finally:
+        _apagar_tmp(cam)
+
+    categorias: list[str] = []
+
+    def _coletar(no: dict) -> None:
+        if no['tipo'] == 'NT' and no['simbolo'] == 'stmt_inner':
+            categorias.append(no['anotacoes'].get('categoria', ''))
+        for f in no.get('filhos', []):
+            _coletar(f)
+
+    _coletar(atribuida)
+    assert 'condicional' in categorias, (
+        f"Categoria 'condicional' não encontrada: {categorias}"
+    )
+
+
+def test_gerarArvoreAtribuida_categoria_repeticao() -> None:
+    """stmt_inner WHILE deve ter categoria 'repeticao'."""
+    cam = _escrever_tmp(
+        "(START)\n"
+        "(0.0 I)\n"
+        "(WHILE (I 3.0 <) ((I 1.0 +) I))\n"
+        "(END)\n"
+    )
+    try:
+        tokens, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, _ = verificarTipos(arvore, tabela)
+        atribuida = gerarArvoreAtribuida(arvore, tabela, tipos)
+    finally:
+        _apagar_tmp(cam)
+
+    categorias: list[str] = []
+
+    def _coletar(no: dict) -> None:
+        if no['tipo'] == 'NT' and no['simbolo'] == 'stmt_inner':
+            categorias.append(no['anotacoes'].get('categoria', ''))
+        for f in no.get('filhos', []):
+            _coletar(f)
+
+    _coletar(atribuida)
+    assert 'repeticao' in categorias, (
+        f"Categoria 'repeticao' não encontrada: {categorias}"
+    )
+
+
+def test_gerarArvoreAtribuida_json_serializavel() -> None:
+    """A árvore atribuída deve ser serializável em JSON sem erros."""
+    arvore, tabela, tipos = _programa_simples_arvore()
+    atribuida = gerarArvoreAtribuida(arvore, tabela, tipos)
+    resultado = _arvore_atribuida_para_json(atribuida)
+    assert isinstance(resultado, str), "Resultado deve ser string"
+    assert '"tipo"' in resultado, "JSON deve conter campo 'tipo'"
+    assert '"anotacoes"' in resultado, "JSON deve conter campo 'anotacoes'"
+    recarregado = json.loads(resultado)
+    assert recarregado['tipo'] == 'NT'
+
+
+def test_gerarAssemblySemantico_tem_secoes() -> None:
+    """Assembly gerado deve conter as seções .data e .text."""
+    arvore, tabela, tipos = _programa_simples_arvore()
+    atribuida = gerarArvoreAtribuida(arvore, tabela, tipos)
+    asm = gerarAssemblySemantico(atribuida)
+    assert '.section .data' in asm, "Assembly deve ter seção .data"
+    assert '.section .text' in asm, "Assembly deve ter seção .text"
+    assert '_start:' in asm, "Assembly deve ter rótulo _start"
+
+
+def test_gerarAssemblySemantico_operacao_soma() -> None:
+    """Expressão (3.0 2.0 +) deve gerar instrução VADD."""
+    arvore, tabela, tipos = _programa_simples_arvore()
+    atribuida = gerarArvoreAtribuida(arvore, tabela, tipos)
+    asm = gerarAssemblySemantico(atribuida)
+    assert 'VADD' in asm, "Soma de reais deve usar VADD.F64"
+
+
+def test_gerarAssemblySemantico_operacao_subtracao() -> None:
+    """Expressão (5.0 2.0 -) deve gerar instrução VSUB."""
+    cam = _escrever_tmp("(START)\n(5.0 2.0 -)\n(END)\n")
+    try:
+        tokens, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, _ = verificarTipos(arvore, tabela)
+        atribuida = gerarArvoreAtribuida(arvore, tabela, tipos)
+        asm = gerarAssemblySemantico(atribuida)
+    finally:
+        _apagar_tmp(cam)
+    assert 'VSUB' in asm, "Subtração de reais deve usar VSUB.F64"
+
+
+def test_gerarAssemblySemantico_store_load() -> None:
+    """Operações de store (V MEM) e load (MEM) devem gerar VSTR e VLDR."""
+    cam = _escrever_tmp("(START)\n(42.0 VAL)\n(VAL)\n(END)\n")
+    try:
+        tokens, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, _ = verificarTipos(arvore, tabela)
+        atribuida = gerarArvoreAtribuida(arvore, tabela, tipos)
+        asm = gerarAssemblySemantico(atribuida)
+    finally:
+        _apagar_tmp(cam)
+    assert 'VSTR' in asm, "Store deve gerar VSTR"
+    assert 'VLDR' in asm, "Load deve gerar VLDR"
+
+
+def test_gerarAssemblySemantico_if_gera_branch() -> None:
+    """Estrutura IF deve gerar branch condicional no Assembly."""
+    cam = _escrever_tmp(
+        "(START)\n"
+        "(5.0 X)\n"
+        "(IF (X 0.0 >) (1.0 R) (0.0 R))\n"
+        "(END)\n"
+    )
+    try:
+        tokens, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, _ = verificarTipos(arvore, tabela)
+        atribuida = gerarArvoreAtribuida(arvore, tabela, tipos)
+        asm = gerarAssemblySemantico(atribuida)
+    finally:
+        _apagar_tmp(cam)
+    assert any(b in asm for b in ('BEQ', 'BGT', 'BLT', 'BGE', 'BLE', 'BNE')), (
+        "IF deve gerar instrução de branch condicional"
+    )
+
+
+def test_gerarAssemblySemantico_while_gera_loop() -> None:
+    """WHILE deve gerar rótulo de loop e branch incondicional no Assembly."""
+    cam = _escrever_tmp(
+        "(START)\n"
+        "(0 I)\n"
+        "(WHILE (I 3 <) ((I 1 +) I))\n"
+        "(END)\n"
+    )
+    try:
+        tokens, arvore, _, _ = prepararEntradaSemantica(cam)
+        tabela, _ = construirTabelaSimbolos(arvore)
+        tipos, _ = verificarTipos(arvore, tabela)
+        atribuida = gerarArvoreAtribuida(arvore, tabela, tipos)
+        asm = gerarAssemblySemantico(atribuida)
+    finally:
+        _apagar_tmp(cam)
+    assert 'while_loop' in asm.lower() or '\n  B ' in asm, (
+        "WHILE deve gerar rótulo de loop e branch incondicional"
+    )
+
+
+def test_pipeline_completo_teste1() -> None:
+    """Pipeline completo com teste1.txt deve concluir sem erros."""
+    cam = os.path.join(_DIR_PROJETO, 'teste1.txt')
+    tokens, arvore, erros_lex, erros_sint = prepararEntradaSemantica(cam)
+    assert not erros_lex,  f"teste1.txt não deveria ter erros léxicos: {erros_lex}"
+    assert not erros_sint, f"teste1.txt não deveria ter erros sintáticos: {erros_sint}"
+
+    tabela, erros_tab = construirTabelaSimbolos(arvore)
+    tipos, erros_tipos = verificarTipos(arvore, tabela)
+    assert not erros_tab,   f"teste1.txt não deveria ter erros de declaração: {erros_tab}"
+    assert not erros_tipos, f"teste1.txt não deveria ter erros de tipo: {erros_tipos}"
+
+    atribuida = gerarArvoreAtribuida(arvore, tabela, tipos)
+    assert atribuida['tipo'] == 'NT', "Árvore atribuída deve ser NT"
+
+    asm = gerarAssemblySemantico(atribuida)
+    assert '.section .text' in asm, "Assembly deve ter seção .text"
+    assert 'VADD' in asm or 'VMUL' in asm, "Assembly deve ter operações FP"
+
+
+def test_pipeline_erros_semanticos_teste2() -> None:
+    """teste2.txt tem erros semânticos: devem ser detectados."""
+    cam = os.path.join(_DIR_PROJETO, 'teste2.txt')
+    tokens, arvore, erros_lex, erros_sint = prepararEntradaSemantica(cam)
+
+    tabela, erros_tab = construirTabelaSimbolos(arvore)
+    tipos, erros_tipos = verificarTipos(arvore, tabela)
+
+    total_sem = len(erros_tab) + len(erros_tipos)
+    assert total_sem > 0, (
+        "teste2.txt tem erros semânticos intencionais — devem ser detectados"
+    )
+
+
+def test_pipeline_completo_teste3() -> None:
+    """Pipeline completo com teste3.txt deve concluir sem erros."""
+    cam = os.path.join(_DIR_PROJETO, 'teste3.txt')
+    tokens, arvore, erros_lex, erros_sint = prepararEntradaSemantica(cam)
+    assert not erros_lex,  f"teste3.txt não deveria ter erros léxicos: {erros_lex}"
+    assert not erros_sint, f"teste3.txt não deveria ter erros sintáticos: {erros_sint}"
+
+    tabela, erros_tab = construirTabelaSimbolos(arvore)
+    tipos, erros_tipos = verificarTipos(arvore, tabela)
+    assert not erros_tab,   f"teste3.txt não deveria ter erros de declaração: {erros_tab}"
+    assert not erros_tipos, f"teste3.txt não deveria ter erros de tipo: {erros_tipos}"
+
+    atribuida = gerarArvoreAtribuida(arvore, tabela, tipos)
+    asm = gerarAssemblySemantico(atribuida)
+    assert '.section .text' in asm
+
+
+def rodar_testes_aluno4() -> None:
+    test_gerarArvoreAtribuida_preserva_estrutura()
+    test_gerarArvoreAtribuida_tem_anotacoes()
+    test_gerarArvoreAtribuida_anotacoes_nt_tem_categoria()
+    test_gerarArvoreAtribuida_categoria_inicio_fim()
+    test_gerarArvoreAtribuida_tipo_semantico_real()
+    test_gerarArvoreAtribuida_categoria_condicional()
+    test_gerarArvoreAtribuida_categoria_repeticao()
+    test_gerarArvoreAtribuida_json_serializavel()
+    test_gerarAssemblySemantico_tem_secoes()
+    test_gerarAssemblySemantico_operacao_soma()
+    test_gerarAssemblySemantico_operacao_subtracao()
+    test_gerarAssemblySemantico_store_load()
+    test_gerarAssemblySemantico_if_gera_branch()
+    test_gerarAssemblySemantico_while_gera_loop()
+    test_pipeline_completo_teste1()
+    test_pipeline_erros_semanticos_teste2()
+    test_pipeline_completo_teste3()
+    print("Todos os testes do Aluno 4 passaram.")
+
+
+# ─────────────────────────────────────────────────────────────
 # Ponto de entrada
 # ─────────────────────────────────────────────────────────────
 
@@ -2366,5 +2940,7 @@ if __name__ == '__main__':
         rodar_testes_construirTabelaSimbolos()
     elif len(sys.argv) == 2 and sys.argv[1] == '--test-verificar':
         rodar_testes_verificarTipos()
+    elif len(sys.argv) == 2 and sys.argv[1] == '--test-aluno4':
+        rodar_testes_aluno4()
     else:
         main()

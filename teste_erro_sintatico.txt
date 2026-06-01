@@ -1,13 +1,27 @@
+*{ Arquivo de teste: erro sintático — token EXTRA inesperado após operador na linha 22 }*
 (START)
-(1.0 2.0 +)
-(8.0 3.0 -)
-(4.0 2.0 *)
-(10.0 5.0 |)
-(10.0 5.0 /)
-(10.0 5.0 %)
-(2.0 3.0 ^)
-(7.5 VAL)
-(VAL)
-(3 RES)
+*{ ── operadores aritméticos ── }*
+(1.0 2.0 +)           *{ soma real }*
+(8.0 3.0 -)           *{ subtração real }*
+(4.0 2.0 *)           *{ multiplicação real }*
+(10.0 5.0 |)          *{ divisão real }*
+(10 5 /)              *{ divisão inteira }*
+(10 5 %)              *{ resto }*
+(2 3 ^)               *{ potenciação }*
+*{ ── variáveis e comandos especiais ── }*
+(7.5 VAL)             *{ define VAL como real }*
+(VAL)                 *{ carrega VAL }*
+(3 RES)               *{ resultado de 3 comandos atrás }*
+*{ ── decisão ── }*
+(IF (VAL 5.0 >) (1.0 RES2) (0.0 RES2))
+*{ ── repetição ── }*
+(0 I)
+(WHILE (I 3 <) ((I 1 +) I))
+*{ ── tipos booleanos e expressão aninhada ── }*
+(TRUE)
+(FALSE)
+(4 1.5 +)               *{ int + real → real (promoção numérica) }*
+((VAL 2.0 +) 3.0 *)
+*{ ERRO SINTÁTICO: token EXTRA inesperado após operador }*
 (3.0 2.0 + EXTRA)
 (END)
