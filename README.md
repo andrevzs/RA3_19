@@ -5,7 +5,7 @@
 **Professor:** Prof. Frank Alcântara  
 **Grupo Canvas:** RA3_19
 
-## Integrantes (ordem alfabética)
+## Integrantes
 
 - André Vinícius Zicka Schmidt — andrevzs
 - Gabriel Fischer Domakoski — fochu3013
